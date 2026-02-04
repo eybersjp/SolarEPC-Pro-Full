@@ -11,12 +11,14 @@ export interface SignupRequest {
     email: string;
     password: string;
     name: string;
-    tenant_name?: string;
+    tenant_name: string;
+    firebase_token?: string; // Added for backend registration
 }
 
 export interface LoginRequest {
     email: string;
     password: string;
+    firebase_token?: string; // Added for backend login
 }
 
 export interface UserResponse {
@@ -86,11 +88,16 @@ export interface Precondition {
     notes: string | null;
 }
 
+export interface PreconditionWithBlockers extends Precondition {
+    blockers: string[];
+}
+
 export interface PreconditionUpdate {
     grid_connection?: boolean;
     land_access?: boolean;
     permits_cleared?: boolean;
     financing_confirmed?: boolean;
+    go_decision?: boolean;
     notes?: string;
 }
 
@@ -106,6 +113,14 @@ export interface PVDesign {
     dc_ac_ratio: number;
     total_modules: number;
     total_capacity_kwp: number;
+    created_at: string;
+    valid?: boolean;
+    warnings?: string[];
+}
+
+export interface PVDesignWithValidation extends PVDesign {
+    valid: boolean;
+    warnings: string[];
 }
 
 export interface PVDesignCreate {
@@ -145,6 +160,7 @@ export interface BOQItemUpdate {
 }
 
 export interface BOQSummary {
+    items: BOQItem[];
     total_cost: number;
     total_margin: number;
     grand_total: number;

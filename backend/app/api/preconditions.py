@@ -72,6 +72,7 @@ async def update_preconditions(
         land_access=request.land_access,
         permits_cleared=request.permits_cleared,
         financing_confirmed=request.financing_confirmed,
+        go_decision=request.go_decision,
         notes=request.notes,
     )
     

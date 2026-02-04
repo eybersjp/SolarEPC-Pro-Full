@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { QueryProvider } from "@/providers/QueryProvider";
+import { AuthProvider } from "@/contexts/AuthContext";
 import { Toaster } from "@/components/ui/toaster";
+
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 export const metadata: Metadata = {
     title: "SolarEPC Pro",
@@ -17,8 +20,12 @@ export default function RootLayout({
         <html lang="en" className="dark">
             <body>
                 <QueryProvider>
-                    {children}
-                    <Toaster />
+                    <AuthProvider>
+                        <ErrorBoundary>
+                            {children}
+                        </ErrorBoundary>
+                        <Toaster />
+                    </AuthProvider>
                 </QueryProvider>
             </body>
         </html>

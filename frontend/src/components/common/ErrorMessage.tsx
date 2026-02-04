@@ -1,35 +1,35 @@
-"use client";
-
-import { AlertCircle } from "lucide-react";
+import { LucideAlertCircle } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import type { ApiError } from "@/lib/api";
 
 interface ErrorMessageProps {
-    error: Error | ApiError | null;
+    title?: string;
+    message: string;
     retry?: () => void;
-    className?: string;
 }
 
-export function ErrorMessage({ error, retry, className }: ErrorMessageProps) {
-    if (!error) return null;
-
-    const message = error.message || "Something went wrong";
-
+export function ErrorMessage({
+    title = "Error",
+    message,
+    retry
+}: ErrorMessageProps) {
     return (
-        <div
-            className={cn(
-                "flex flex-col items-center justify-center rounded-lg border border-danger/20 bg-danger/10 p-6 text-center",
-                className
-            )}
-        >
-            <AlertCircle className="mb-2 h-10 w-10 text-danger" />
-            <p className="mb-4 text-sm text-danger">{message}</p>
-            {retry && (
-                <Button variant="outline" size="sm" onClick={retry}>
-                    Try Again
-                </Button>
-            )}
-        </div>
+        <Alert variant="destructive" className="my-4">
+            <LucideAlertCircle className="h-4 w-4" />
+            <AlertTitle>{title}</AlertTitle>
+            <AlertDescription className="mt-2 flex flex-col gap-4">
+                <p>{message}</p>
+                {retry && (
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={retry}
+                        className="w-fit"
+                    >
+                        Retry
+                    </Button>
+                )}
+            </AlertDescription>
+        </Alert>
     );
 }

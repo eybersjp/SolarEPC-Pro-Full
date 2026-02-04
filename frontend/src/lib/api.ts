@@ -10,8 +10,10 @@ import type {
     TenderResponse,
     DashboardResponse,
     PVDesign,
+    PVDesignWithValidation,
     PVDesignCreate,
     Precondition,
+    PreconditionWithBlockers,
     PreconditionUpdate,
     BOQItem,
     BOQItemCreate,
@@ -96,7 +98,7 @@ export const authApi = {
         }),
 
     login: (data: LoginRequest) =>
-        fetchApi<{ token: string }>("/auth/login", {
+        fetchApi<UserResponse>("/auth/login", {
             method: "POST",
             body: data,
             skipAuth: true,
@@ -138,17 +140,17 @@ export const pvDesignsApi = {
     list: (tenderId: string) =>
         fetchApi<PVDesign[]>(`/tenders/${tenderId}/pv-designs`),
 
-    get: (tenderId: string, designId: string) =>
-        fetchApi<PVDesign>(`/tenders/${tenderId}/pv-designs/${designId}`),
+    get: (designId: string) =>
+        fetchApi<PVDesignWithValidation>(`/pv-designs/${designId}`),
 
     create: (tenderId: string, data: PVDesignCreate) =>
-        fetchApi<PVDesign>(`/tenders/${tenderId}/pv-designs`, {
+        fetchApi<PVDesignWithValidation>(`/tenders/${tenderId}/pv-designs`, {
             method: "POST",
             body: data,
         }),
 
-    delete: (tenderId: string, designId: string) =>
-        fetchApi<void>(`/tenders/${tenderId}/pv-designs/${designId}`, {
+    delete: (designId: string) =>
+        fetchApi<void>(`/pv-designs/${designId}`, {
             method: "DELETE",
         }),
 };
@@ -156,10 +158,10 @@ export const pvDesignsApi = {
 // Preconditions API
 export const preconditionsApi = {
     get: (tenderId: string) =>
-        fetchApi<Precondition>(`/tenders/${tenderId}/preconditions`),
+        fetchApi<PreconditionWithBlockers>(`/tenders/${tenderId}/preconditions`),
 
     update: (tenderId: string, data: PreconditionUpdate) =>
-        fetchApi<Precondition>(`/tenders/${tenderId}/preconditions`, {
+        fetchApi<PreconditionWithBlockers>(`/tenders/${tenderId}/preconditions`, {
             method: "PUT",
             body: data,
         }),
@@ -168,10 +170,7 @@ export const preconditionsApi = {
 // BOQ API
 export const boqApi = {
     list: (tenderId: string) =>
-        fetchApi<BOQItem[]>(`/tenders/${tenderId}/boq`),
-
-    getSummary: (tenderId: string) =>
-        fetchApi<BOQSummary>(`/tenders/${tenderId}/boq/summary`),
+        fetchApi<BOQSummary>(`/tenders/${tenderId}/boq`),
 
     create: (tenderId: string, data: BOQItemCreate) =>
         fetchApi<BOQItem>(`/tenders/${tenderId}/boq`, {
@@ -179,14 +178,40 @@ export const boqApi = {
             body: data,
         }),
 
-    update: (tenderId: string, itemId: string, data: BOQItemUpdate) =>
-        fetchApi<BOQItem>(`/tenders/${tenderId}/boq/${itemId}`, {
+    update: (itemId: string, data: BOQItemUpdate) =>
+        fetchApi<BOQItem>(`/boq/${itemId}`, {
             method: "PUT",
             body: data,
         }),
 
-    delete: (tenderId: string, itemId: string) =>
-        fetchApi<void>(`/tenders/${tenderId}/boq/${itemId}`, {
+    delete: (itemId: string) =>
+        fetchApi<void>(`/boq/${itemId}`, {
             method: "DELETE",
         }),
+
+    export: async (tenderId: string, format: 'json' | 'csv') => {
+        const auth = getAuth();
+        const token = await auth.currentUser?.getIdToken();
+        const headers: Record<string, string> = {};
+        if (token) {
+            headers["Authorization"] = `Bearer ${token}`;
+        }
+
+        const response = await fetch(`${API_URL}/tenders/${tenderId}/boq/export?format=${format}`, {
+            headers
+        });
+
+        if (!response.ok) {
+            let errorData: any;
+            try {
+                errorData = await response.json();
+            } catch {
+                errorData = null;
+            }
+            const errorMessage = errorData?.detail || errorData?.message || response.statusText || "Export failed";
+            throw new ApiError(errorMessage, response.status, errorData);
+        }
+
+        return response.blob();
+    },
 };

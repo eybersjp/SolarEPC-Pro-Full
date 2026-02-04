@@ -50,12 +50,14 @@ class PreconditionService:
         land_access: Optional[bool] = None,
         permits_cleared: Optional[bool] = None,
         financing_confirmed: Optional[bool] = None,
+        go_decision: Optional[bool] = None,
         notes: Optional[str] = None,
     ) -> Precondition:
         """
         Update precondition fields and recompute go_decision.
         
-        Go decision is True only if ALL preconditions are met.
+        Go decision is True only if ALL preconditions are met,
+        unless a manual go_decision is explicitly provided.
         """
         old_values = {}
         new_values = {}
@@ -85,9 +87,12 @@ class PreconditionService:
             new_values["notes"] = notes
             precondition.notes = notes
         
-        # Recompute go decision
+        # Recompute or set go decision
         old_go = precondition.go_decision
-        precondition.go_decision = self._compute_go_decision(precondition)
+        if go_decision is not None:
+            precondition.go_decision = go_decision
+        else:
+            precondition.go_decision = self._compute_go_decision(precondition)
         
         if old_go != precondition.go_decision:
             old_values["go_decision"] = old_go

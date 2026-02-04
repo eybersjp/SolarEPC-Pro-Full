@@ -116,6 +116,7 @@ class PreconditionUpdate(BaseModel):
     land_access: Optional[bool] = None
     permits_cleared: Optional[bool] = None
     financing_confirmed: Optional[bool] = None
+    go_decision: Optional[bool] = None
     notes: Optional[str] = None
 
 
