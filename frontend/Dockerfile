@@ -1,0 +1,13 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install dependencies
+COPY package*.json ./
+RUN npm install
+
+# Copy application
+COPY . .
+
+# Run dev server
+CMD ["npm", "run", "dev"]

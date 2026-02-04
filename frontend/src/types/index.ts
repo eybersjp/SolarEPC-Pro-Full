@@ -1,0 +1,175 @@
+/**
+ * TypeScript type definitions for SolarEPC Pro API.
+ */
+
+// Enums
+export type UserRole = 'admin' | 'pm' | 'engineer' | 'viewer';
+export type TenderStatus = 'draft' | 'in_review' | 'submitted' | 'won' | 'lost';
+
+// Auth Request/Response Types
+export interface SignupRequest {
+    email: string;
+    password: string;
+    name: string;
+    tenant_name?: string;
+}
+
+export interface LoginRequest {
+    email: string;
+    password: string;
+}
+
+export interface UserResponse {
+    id: string;
+    email: string;
+    name: string;
+    role: UserRole;
+    tenant_id: string;
+}
+
+// User
+export interface User {
+    id: string;
+    email: string;
+    name: string;
+    role: UserRole;
+    tenant_id: string;
+}
+
+// Tenant
+export interface Tenant {
+    id: string;
+    name: string;
+}
+
+// Tender Types
+export interface Tender {
+    id: string;
+    name: string;
+    client_name: string | null;
+    latitude: number | null;
+    longitude: number | null;
+    target_capacity_kw: number | null;
+    status: TenderStatus;
+    created_at: string;
+}
+
+export interface TenderCreate {
+    name: string;
+    client_name?: string;
+    latitude?: number;
+    longitude?: number;
+    target_capacity_kw?: number;
+}
+
+export interface TenderUpdate {
+    name?: string;
+    client_name?: string;
+    latitude?: number;
+    longitude?: number;
+    target_capacity_kw?: number;
+    status?: TenderStatus;
+}
+
+export interface TenderResponse extends Tender {
+    updated_at: string;
+    tenant_id: string;
+}
+
+// Preconditions Types
+export interface Precondition {
+    grid_connection: boolean;
+    land_access: boolean;
+    permits_cleared: boolean;
+    financing_confirmed: boolean;
+    go_decision: boolean;
+    notes: string | null;
+}
+
+export interface PreconditionUpdate {
+    grid_connection?: boolean;
+    land_access?: boolean;
+    permits_cleared?: boolean;
+    financing_confirmed?: boolean;
+    notes?: string;
+}
+
+// PV Design Types
+export interface PVDesign {
+    id: string;
+    module_model: string;
+    module_watt: number;
+    inverter_model: string;
+    inverter_kw: number;
+    strings_per_inverter: number;
+    modules_per_string: number;
+    dc_ac_ratio: number;
+    total_modules: number;
+    total_capacity_kwp: number;
+}
+
+export interface PVDesignCreate {
+    module_model: string;
+    module_watt: number;
+    inverter_model: string;
+    inverter_kw: number;
+    strings_per_inverter: number;
+    modules_per_string: number;
+}
+
+// BOQ Types
+export interface BOQItem {
+    id: string;
+    category: string;
+    description: string;
+    unit_cost: number;
+    quantity: number;
+    margin_pct: number;
+    line_total: number;
+}
+
+export interface BOQItemCreate {
+    category: string;
+    description: string;
+    unit_cost: number;
+    quantity: number;
+    margin_pct?: number;
+}
+
+export interface BOQItemUpdate {
+    category?: string;
+    description?: string;
+    unit_cost?: number;
+    quantity?: number;
+    margin_pct?: number;
+}
+
+export interface BOQSummary {
+    total_cost: number;
+    total_margin: number;
+    grand_total: number;
+    item_count: number;
+}
+
+// Dashboard Types
+export interface DashboardStats {
+    total_tenders: number;
+    active_tenders: number;
+    won_tenders: number;
+    total_capacity_kw: number;
+}
+
+export interface TenderSummary {
+    id: string;
+    name: string;
+    client_name: string | null;
+    status: TenderStatus;
+    created_at: string;
+    target_capacity_kw: number | null;
+}
+
+export interface DashboardResponse {
+    stats: DashboardStats;
+    recent_tenders: TenderSummary[];
+}
+
