@@ -26,7 +26,10 @@ import { TenderStatus } from "@/types";
 const formSchema = z.object({
     name: z.string().min(3, "Project name must be at least 3 characters"),
     client_name: z.string().min(2, "Client name is required"),
-    target_capacity_kw: z.coerce.number().gt(0, "Capacity must be greater than 0").optional().nullable(),
+    target_capacity_kw: z.preprocess(
+        (val) => (val === "" || val === null ? undefined : val),
+        z.coerce.number().gt(0, "Capacity must be greater than 0").optional()
+    ).optional(),
     status: z.enum(["draft", "in_review", "submitted", "won", "lost"] as const),
     latitude: z.coerce.number().optional().nullable(),
     longitude: z.coerce.number().optional().nullable(),
@@ -50,11 +53,11 @@ export function TenderForm({
     title,
 }: TenderFormProps) {
     const form = useForm<TenderFormValues>({
-        resolver: zodResolver(formSchema),
+        resolver: zodResolver(formSchema) as any,
         defaultValues: {
             name: "",
             client_name: "",
-            target_capacity_kw: 0,
+            target_capacity_kw: undefined,
             status: "draft",
             latitude: null,
             longitude: null,
@@ -67,7 +70,7 @@ export function TenderForm({
             form.reset({
                 name: initialData.name || "",
                 client_name: initialData.client_name || "",
-                target_capacity_kw: initialData.target_capacity_kw ?? null,
+                target_capacity_kw: initialData.target_capacity_kw ?? undefined,
                 status: initialData.status as TenderStatus || "draft",
                 latitude: initialData.latitude ?? null,
                 longitude: initialData.longitude ?? null,
@@ -121,7 +124,7 @@ export function TenderForm({
                             <FormItem>
                                 <FormLabel>Target Capacity (kW)</FormLabel>
                                 <FormControl>
-                                    <Input type="number" {...field} />
+                                    <Input type="number" {...field} value={field.value ?? ""} />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>

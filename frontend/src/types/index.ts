@@ -161,10 +161,9 @@ export interface BOQItemUpdate {
 
 export interface BOQSummary {
     items: BOQItem[];
-    total_cost: number;
+    subtotal: number;
     total_margin: number;
     grand_total: number;
-    item_count: number;
 }
 
 // Dashboard Types
