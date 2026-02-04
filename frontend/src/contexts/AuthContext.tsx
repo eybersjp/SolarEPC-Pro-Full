@@ -101,7 +101,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             toast.error(message);
 
             // If backend fails but firebase succeeded, we might want to clean up or handle it
-            // For now, just toast the error
+            if (auth.currentUser) {
+                try {
+                    await auth.currentUser.delete();
+                } catch (deleteError) {
+                    console.error("Failed to delete Firebase user after backend failure:", deleteError);
+                    await signOut(auth);
+                }
+            }
             throw error;
         } finally {
             setLoading(false);
