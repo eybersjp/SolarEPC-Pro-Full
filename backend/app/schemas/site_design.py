@@ -89,5 +89,23 @@ class SiteDesignResponse(SiteDesignBase):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+
+class PlacementTaskStatusResponse(BaseModel):
+    task_id: str
+    status: str
+    progress_percentage: float = 0.0
+    total_modules: int = 0
+    system_size_kwp: float = 0.0
+    placement_calculated_at: Optional[datetime] = None
+    error: Optional[str] = None
+    estimated_modules: Optional[int] = None
+    mode: Optional[str] = None
+
+
+class RecalculateResponse(BaseModel):
+    mode: str
+    task_id: Optional[str] = None
+    estimated_modules: Optional[int] = None
+    status: str
+    total_modules: Optional[int] = None
+    system_size_kwp: Optional[float] = None
