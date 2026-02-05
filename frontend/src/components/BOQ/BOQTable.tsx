@@ -109,15 +109,15 @@ export function BOQTable({ items, onEdit, onDelete, isDeleting, onCreateFirst }:
 
     return (
         <>
-            <div className="rounded-md border">
+            <div className="rounded-md border overflow-x-auto">
                 <Table>
                     <TableHeader>
                         <TableRow>
                             <TableHead>Description</TableHead>
                             <TableHead className="text-right">Qty</TableHead>
-                            <TableHead className="text-right">Unit Cost</TableHead>
-                            <TableHead className="text-right">Total Cost</TableHead>
-                            <TableHead className="text-right">Margin</TableHead>
+                            <TableHead className="text-right hidden lg:table-cell">Unit Cost</TableHead>
+                            <TableHead className="text-right hidden md:table-cell">Total Cost</TableHead>
+                            <TableHead className="text-right hidden lg:table-cell">Margin</TableHead>
                             <TableHead className="text-right">Price</TableHead>
                             <TableHead className="text-right w-[100px]">Actions</TableHead>
                         </TableRow>
@@ -139,9 +139,9 @@ export function BOQTable({ items, onEdit, onDelete, isDeleting, onCreateFirst }:
                                                 <span className="truncate block">{item.description}</span>
                                             </TableCell>
                                             <TableCell className="text-right tabular-nums">{item.quantity}</TableCell>
-                                            <TableCell className="text-right tabular-nums">{formatCurrency(item.unit_cost)}</TableCell>
-                                            <TableCell className="text-right tabular-nums">{formatCurrency(totalCost)}</TableCell>
-                                            <TableCell className="text-right tabular-nums">{item.margin_pct.toFixed(1)}%</TableCell>
+                                            <TableCell className="text-right tabular-nums hidden lg:table-cell">{formatCurrency(item.unit_cost)}</TableCell>
+                                            <TableCell className="text-right tabular-nums hidden md:table-cell">{formatCurrency(totalCost)}</TableCell>
+                                            <TableCell className="text-right tabular-nums hidden lg:table-cell">{item.margin_pct.toFixed(1)}%</TableCell>
                                             <TableCell className="text-right font-semibold tabular-nums">{formatCurrency(price)}</TableCell>
                                             <TableCell className="text-right">
                                                 <div className="flex justify-end space-x-1">

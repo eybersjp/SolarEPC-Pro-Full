@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 import {
     Select,
     SelectContent,
@@ -94,7 +95,7 @@ export function TenderForm({
                         name="name"
                         render={({ field }: { field: any }) => (
                             <FormItem>
-                                <FormLabel>Project Name</FormLabel>
+                                <FormLabel>Project Name <span className="text-destructive">*</span></FormLabel>
                                 <FormControl>
                                     <Input placeholder="e.g. Solar Farm Alpha" {...field} />
                                 </FormControl>
@@ -108,7 +109,7 @@ export function TenderForm({
                         name="client_name"
                         render={({ field }: { field: any }) => (
                             <FormItem>
-                                <FormLabel>Client Name</FormLabel>
+                                <FormLabel>Client Name <span className="text-destructive">*</span></FormLabel>
                                 <FormControl>
                                     <Input placeholder="e.g. Green Energy Corp" {...field} />
                                 </FormControl>
@@ -160,7 +161,7 @@ export function TenderForm({
                         )}
                     />
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <FormField
                             control={form.control}
                             name="latitude"
@@ -194,7 +195,14 @@ export function TenderForm({
                             Cancel
                         </Button>
                         <Button type="submit" disabled={isLoading}>
-                            {isLoading ? "Saving..." : "Save Changes"}
+                            {isLoading ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Saving...
+                                </>
+                            ) : (
+                                "Save Changes"
+                            )}
                         </Button>
                     </div>
                 </form>

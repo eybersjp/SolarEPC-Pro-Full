@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Loader2, Calculator } from "lucide-react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -41,7 +42,7 @@ export function PVDesignForm({ tenderId, onSuccess }: PVDesignFormProps) {
     const { createDesignAsync, isCreating } = usePVDesigns(tenderId);
 
     const form = useForm<z.infer<typeof pvDesignSchema>>({
-        resolver: zodResolver(pvDesignSchema),
+        resolver: zodResolver(pvDesignSchema) as any,
         defaultValues: {
             module_model: "",
             module_watt: 0,
@@ -57,9 +58,15 @@ export function PVDesignForm({ tenderId, onSuccess }: PVDesignFormProps) {
             const design = await createDesignAsync(values);
             setResult(design);
             form.reset();
+            toast.success("Design created successfully", {
+                description: `PV Design for ${values.module_model} has been generated.`,
+            });
             // Do not call onSuccess immediately so user can see results
         } catch (error) {
             console.error("Failed to create PV design:", error);
+            toast.error("Failed to create design", {
+                description: "There was an error generating the PV design. Please try again.",
+            });
         }
     }
 

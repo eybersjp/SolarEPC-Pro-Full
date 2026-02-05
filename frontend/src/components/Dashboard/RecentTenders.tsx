@@ -53,42 +53,44 @@ export function RecentTenders({ tenders }: RecentTendersProps) {
 
     return (
         <div className="border rounded-lg bg-card overflow-hidden">
-            <Table>
-                <TableHeader>
-                    <TableRow>
-                        <TableHead>Tender Name</TableHead>
-                        <TableHead>Client</TableHead>
-                        <TableHead>Capacity (kW)</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Created</TableHead>
-                        <TableHead className="w-[50px]"></TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {tenders.map((tender) => (
-                        <TableRow key={tender.id} className="group cursor-pointer">
-                            <TableCell className="font-medium">
-                                <Link href={`/tenders/${tender.id}`} className="hover:underline block">
-                                    {tender.name}
-                                </Link>
-                            </TableCell>
-                            <TableCell>{tender.client_name || "-"}</TableCell>
-                            <TableCell>{tender.target_capacity_kw ? `${tender.target_capacity_kw} kW` : "-"}</TableCell>
-                            <TableCell>
-                                <Badge variant={getStatusVariant(tender.status)} className="capitalize">
-                                    {tender.status.replace("_", " ")}
-                                </Badge>
-                            </TableCell>
-                            <TableCell className="text-right text-muted-foreground">
-                                {format(new Date(tender.created_at), "MMM d, yyyy")}
-                            </TableCell>
-                            <TableCell>
-                                <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                            </TableCell>
+            <div className="overflow-x-auto">
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Tender Name</TableHead>
+                            <TableHead className="hidden sm:table-cell">Client</TableHead>
+                            <TableHead className="hidden md:table-cell">Capacity (kW)</TableHead>
+                            <TableHead className="hidden sm:table-cell">Status</TableHead>
+                            <TableHead className="text-right">Created</TableHead>
+                            <TableHead className="w-[50px]"></TableHead>
                         </TableRow>
-                    ))}
-                </TableBody>
-            </Table>
+                    </TableHeader>
+                    <TableBody>
+                        {tenders.map((tender) => (
+                            <TableRow key={tender.id} className="group cursor-pointer">
+                                <TableCell className="font-medium max-w-[200px] truncate">
+                                    <Link href={`/tenders/${tender.id}`} className="hover:underline block">
+                                        {tender.name}
+                                    </Link>
+                                </TableCell>
+                                <TableCell className="hidden sm:table-cell">{tender.client_name || "-"}</TableCell>
+                                <TableCell className="hidden md:table-cell">{tender.target_capacity_kw ? `${tender.target_capacity_kw} kW` : "-"}</TableCell>
+                                <TableCell className="hidden sm:table-cell">
+                                    <Badge variant={getStatusVariant(tender.status)} className="capitalize">
+                                        {tender.status.replace("_", " ")}
+                                    </Badge>
+                                </TableCell>
+                                <TableCell className="text-right text-muted-foreground text-sm">
+                                    {format(new Date(tender.created_at), "MMM d, yyyy")}
+                                </TableCell>
+                                <TableCell>
+                                    <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </div>
             <div className="p-4 border-t bg-muted/30 text-center">
                 <Link href="/tenders" className="text-sm font-medium text-primary hover:underline underline-offset-4">
                     View all tenders

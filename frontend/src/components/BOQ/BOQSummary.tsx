@@ -1,20 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Wallet, TrendingUp, DollarSign } from "lucide-react";
-import { formatCurrency } from "@/lib/utils"; // Assuming utils exists, otherwise I'll mock or create it. 
-// formatCurrency helper might not exist. I'll use Intl.NumberFormat inline or create a utility if I check utils.ts. 
-// I'll stick to inline for now to be safe or check utils.ts first? 
-// The user has `frontend/src/lib/utils.ts` in shadcn setups usually.
-// I'll implement a local helper if import fails, but let's assume standard shadcn/nextjs setup.
-// Actually, to be safe, I'll define it locally in this file or use simple formatting.
-
-function formatCurrency(amount: number) {
-    return new Intl.NumberFormat("en-US", {
-        style: "currency",
-        currency: "USD",
-        maximumFractionDigits: 0,
-    }).format(amount);
-}
-
+import { formatCurrency } from "@/lib/utils";
 interface BOQSummaryProps {
     totalCost: number;
     totalMargin: number; // This is absolute value or percentage? 

@@ -57,7 +57,7 @@ const CATEGORIES = [
 
 export function BOQItemForm({ initialData, onSubmit, isLoading, onCancel }: BOQItemFormProps) {
     const form = useForm<z.infer<typeof boqItemSchema>>({
-        resolver: zodResolver(boqItemSchema),
+        resolver: zodResolver(boqItemSchema) as any,
         defaultValues: {
             category: "",
             description: "",
@@ -94,7 +94,7 @@ export function BOQItemForm({ initialData, onSubmit, isLoading, onCancel }: BOQI
                     name="category"
                     render={({ field }) => (
                         <FormItem>
-                            <FormLabel>Category</FormLabel>
+                            <FormLabel>Category <span className="text-destructive">*</span></FormLabel>
                             <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
                                 <FormControl>
                                     <SelectTrigger>
@@ -118,7 +118,7 @@ export function BOQItemForm({ initialData, onSubmit, isLoading, onCancel }: BOQI
                     name="description"
                     render={({ field }) => (
                         <FormItem>
-                            <FormLabel>Description</FormLabel>
+                            <FormLabel>Description <span className="text-destructive">*</span></FormLabel>
                             <FormControl>
                                 <Textarea placeholder="Item description" {...field} />
                             </FormControl>
@@ -126,13 +126,13 @@ export function BOQItemForm({ initialData, onSubmit, isLoading, onCancel }: BOQI
                         </FormItem>
                     )}
                 />
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <FormField
                         control={form.control}
                         name="quantity"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Quantity</FormLabel>
+                                <FormLabel>Quantity <span className="text-destructive">*</span></FormLabel>
                                 <FormControl>
                                     <Input type="number" {...field} />
                                 </FormControl>
@@ -145,7 +145,7 @@ export function BOQItemForm({ initialData, onSubmit, isLoading, onCancel }: BOQI
                         name="unit_cost"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Unit Cost ($)</FormLabel>
+                                <FormLabel>Unit Cost ($) <span className="text-destructive">*</span></FormLabel>
                                 <FormControl>
                                     <Input type="number" step="0.01" {...field} />
                                 </FormControl>

@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Plus } from "lucide-react";
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -17,9 +18,11 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardDescription, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { TableSkeleton } from "@/components/common/TableSkeleton";
 
 import { PVDesignList } from "@/components/PVDesign/PVDesignList";
 import { PVDesignForm } from "@/components/PVDesign/PVDesignForm";
+import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { tendersApi } from "@/lib/api";
 import { usePVDesigns } from "@/hooks/usePVDesigns";
 import { AppShell } from "@/components/common/AppShell";
@@ -31,6 +34,8 @@ export default function PVDesignsPage() {
     const router = useRouter();
     const tenderId = params.id as string;
     const [isCreateOpen, setIsCreateOpen] = useState(false);
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [designToDelete, setDesignToDelete] = useState<string | null>(null);
 
     // Fetch tender details for context
     const { data: tender, isLoading: isTenderLoading } = useQuery({
@@ -92,7 +97,7 @@ export default function PVDesignsPage() {
                                     New Design
                                 </Button>
                             </DialogTrigger>
-                            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+                            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full">
                                 <DialogHeader>
                                     <DialogTitle>Create New PV Design</DialogTitle>
                                     <DialogDescription>
@@ -126,15 +131,14 @@ export default function PVDesignsPage() {
                             </CardHeader>
                             <div className="p-6 pt-0">
                                 {isDesignsLoading ? (
-                                    <div className="space-y-2">
-                                        <Skeleton className="h-12 w-full" />
-                                        <Skeleton className="h-12 w-full" />
-                                        <Skeleton className="h-12 w-full" />
-                                    </div>
+                                    <TableSkeleton columnCount={5} rowCount={5} />
                                 ) : (
                                     <PVDesignList
                                         designs={designs || []}
-                                        onDelete={handleDelete}
+                                        onDelete={(id) => {
+                                            setDesignToDelete(id);
+                                            setDeleteDialogOpen(true);
+                                        }}
                                         isDeleting={currentDeletingId}
                                         onCreateFirst={() => setIsCreateOpen(true)}
                                     />
@@ -144,6 +148,22 @@ export default function PVDesignsPage() {
                     </TabsContent>
                 </Tabs>
             </div>
+
+            <ConfirmDialog
+                open={deleteDialogOpen}
+                onOpenChange={setDeleteDialogOpen}
+                title="Delete PV Design"
+                description="Are you sure you want to delete this design? This action cannot be undone."
+                variant="danger"
+                confirmLabel="Delete"
+                onConfirm={() => {
+                    if (designToDelete) {
+                        handleDelete(designToDelete);
+                        setDeleteDialogOpen(false);
+                    }
+                }}
+                isLoading={currentDeletingId === designToDelete}
+            />
         </AppShell>
     );
 }

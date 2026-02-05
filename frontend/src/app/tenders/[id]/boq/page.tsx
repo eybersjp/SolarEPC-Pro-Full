@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { TableSkeleton } from "@/components/common/TableSkeleton";
 
 import { useBOQ } from "@/hooks/useBOQ";
 import { useTender } from "@/lib/hooks/useTenders";
@@ -147,7 +148,7 @@ export default function BOQPage() {
                                     Add Item
                                 </Button>
                             </DialogTrigger>
-                            <DialogContent className="sm:max-w-[500px]">
+                            <DialogContent className="sm:max-w-[500px] max-w-[95vw]">
                                 <DialogHeader>
                                     <DialogTitle>Add BOQ Item</DialogTitle>
                                     <DialogDescription>
@@ -155,7 +156,7 @@ export default function BOQPage() {
                                     </DialogDescription>
                                 </DialogHeader>
                                 <BOQItemForm
-                                    onSubmit={handleCreateItem}
+                                    onSubmit={handleCreateItem as any}
                                     isLoading={isCreating}
                                     onCancel={() => setIsCreateOpen(false)}
                                 />
@@ -189,11 +190,7 @@ export default function BOQPage() {
                     </CardHeader>
                     <CardContent>
                         {isLoading ? (
-                            <div className="space-y-2">
-                                <Skeleton className="h-10 w-full" />
-                                <Skeleton className="h-10 w-full" />
-                                <Skeleton className="h-10 w-full" />
-                            </div>
+                            <TableSkeleton columnCount={7} rowCount={8} />
                         ) : (
                             <BOQTable
                                 items={boqData?.items || []}
