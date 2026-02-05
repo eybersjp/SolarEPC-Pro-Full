@@ -17,8 +17,7 @@ export function usePreconditions(tenderId: string | undefined) {
     });
 
     return {
-        preconditions: query.data,
-        blockers: query.data?.blockers ?? [],
+        data: query.data,
         isLoading: query.isLoading,
         error: query.error,
         refetch: query.refetch,
@@ -28,18 +27,18 @@ export function usePreconditions(tenderId: string | undefined) {
 /**
  * Hook for updating preconditions
  */
-export function useUpdatePreconditions() {
+export function useUpdatePreconditions(tenderId: string) {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: ({ tenderId, data }: { tenderId: string; data: PreconditionUpdate }) =>
+        mutationFn: (data: PreconditionUpdate) =>
             preconditionsApi.update(tenderId, data),
-        onSuccess: (_, variables) => {
+        onSuccess: () => {
             queryClient.invalidateQueries({
-                queryKey: queryKeys.preconditions.detail(variables.tenderId),
+                queryKey: queryKeys.preconditions.detail(tenderId),
             });
             queryClient.invalidateQueries({
-                queryKey: queryKeys.tenders.detail(variables.tenderId),
+                queryKey: queryKeys.tenders.detail(tenderId),
             });
             toast.success("Preconditions updated successfully");
         },

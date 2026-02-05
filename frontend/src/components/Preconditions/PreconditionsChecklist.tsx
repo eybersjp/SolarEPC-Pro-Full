@@ -1,6 +1,7 @@
 "use client";
 
 import React from 'react';
+import { cn } from '@/lib/utils';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
@@ -10,12 +11,12 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useUpdatePreconditions } from '@/lib/hooks/usePreconditions';
-import type { Precondition } from '@/types';
-import { CheckCircle2, XCircle, Info, Loader2 } from 'lucide-react';
+import type { PreconditionWithBlockers } from '@/types';
+import { Info, Loader2 } from 'lucide-react';
 
 interface PreconditionsChecklistProps {
     tenderId: string;
-    precondition: Precondition;
+    precondition: PreconditionWithBlockers;
 }
 
 export function PreconditionsChecklist({ tenderId, precondition }: PreconditionsChecklistProps) {
@@ -26,7 +27,7 @@ export function PreconditionsChecklist({ tenderId, precondition }: Preconditions
         setFormData(precondition);
     }, [precondition]);
 
-    const handleCheckboxChange = (field: keyof Precondition, checked: boolean) => {
+    const handleCheckboxChange = (field: keyof PreconditionWithBlockers, checked: boolean) => {
         const newData = { ...formData, [field]: checked };
         setFormData(newData);
     };
@@ -139,7 +140,7 @@ export function PreconditionsChecklist({ tenderId, precondition }: Preconditions
                         </span>
                         <Switch
                             checked={formData.go_decision}
-                            onCheckedChange={(checked) => setFormData({ ...formData, go_decision: checked })}
+                            onCheckedChange={(checked: boolean) => setFormData({ ...formData, go_decision: checked })}
                         />
                     </div>
                 </div>

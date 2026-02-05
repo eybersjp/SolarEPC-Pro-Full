@@ -3,9 +3,9 @@
 import React from 'react';
 import { useParams } from 'next/navigation';
 import { usePreconditions } from '@/lib/hooks/usePreconditions';
-import { useTenders } from '@/lib/hooks/useTenders';
+import { useTender } from '@/lib/hooks/useTenders';
 import { PreconditionsChecklist } from '@/components/Preconditions/PreconditionsChecklist';
-import { Loader2, ArrowLeft, ShieldCheck } from 'lucide-react';
+import { Loader2, ArrowLeft, ShieldCheck, CheckCircle2, XCircle } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 
@@ -13,7 +13,7 @@ export default function PreconditionsPage() {
     const params = useParams();
     const id = params.id as string;
 
-    const { data: tender, isLoading: loadingTender } = useTenders().useGet(id);
+    const { tender, isLoading: loadingTender } = useTender(id);
     const { data: precondition, isLoading: loadingPreconditions, error } = usePreconditions(id);
 
     if (loadingTender || loadingPreconditions) {
