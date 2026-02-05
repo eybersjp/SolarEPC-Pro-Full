@@ -71,19 +71,21 @@ def calculate_polygon_area_sqm(geojson_data: Dict[str, Any]) -> float:
         # but simpler for small areas is using a UTM zone or Web Mercator (less accurate for area).
         # A robust dynamic method is to project to a local AEA based on the polygon's centroid.
         
-        # Using pyproj to project to a local Equal Area Projection centered on the geometry
-        # This gives very accurate area results for site-scale polygons.
+        # Using pyproj Transformer (modern API)
+        from pyproj import Transformer
         
         lon, lat = geom.centroid.x, geom.centroid.y
         
         # Define the projection: Albers Equal Area customized for the polygon's location
         proj_str = f"+proj=aea +lat_1={lat} +lat_2={lat} +lat_0={lat} +lon_0={lon}"
         
-        project = partial(
-            pyproj.transform,
-            pyproj.Proj('epsg:4326'), # Source: WGS84
-            pyproj.Proj(proj_str)     # Target: Custom AEA
+        transformer = Transformer.from_proj(
+            "epsg:4326", # Source
+            proj_str,    # Target
+            always_xy=True
         )
+        
+        project = transformer.transform
         
         geom_transformed = transform(project, geom)
         return geom_transformed.area

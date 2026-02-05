@@ -16,6 +16,7 @@ from app.models import (
     User
 )
 from app.services.audit import AuditService
+from app.services.equipment_library import EquipmentLibraryService
 from app.utils.geojson_validator import validate_geojson_polygon, calculate_polygon_area_sqm
 from app.services.placement_algorithm import PlacementAlgorithmService
 from app.services.tasks import calculate_placement_async
@@ -30,6 +31,7 @@ class SiteDesignService:
         self.tenant_id = tenant_id
         self.user_id = user_id
         self.audit = AuditService(db)
+        self.equipment_lib = EquipmentLibraryService(db, tenant_id, user_id)
     
     def _get_tender_or_404(self, tender_id: UUID) -> Tender:
         """Get tender or raise 404 (tenant-scoped)."""
@@ -47,37 +49,20 @@ class SiteDesignService:
 
     def _validate_equipment(self, module_id: UUID, inverter_id: UUID) -> None:
         """Validate equipment exists and is accessible."""
-        # Validate Module
-        module = self.db.query(EquipmentModule).filter(
-            EquipmentModule.id == module_id,
-            or_(
-                EquipmentModule.is_global == True,
-                EquipmentModule.tenant_id == self.tenant_id
-            ),
-            EquipmentModule.is_active == True
-        ).first()
-        
-        if not module:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Equipment Module {module_id} not found or not accessible"
-            )
-            
-        # Validate Inverter
-        inverter = self.db.query(EquipmentInverter).filter(
-            EquipmentInverter.id == inverter_id,
-            or_(
-                EquipmentInverter.is_global == True,
-                EquipmentInverter.tenant_id == self.tenant_id
-            ),
-            EquipmentInverter.is_active == True
-        ).first()
-        
-        if not inverter:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Equipment Inverter {inverter_id} not found or not accessible"
-            )
+        # Use EquipmentLibraryService for validation
+        try:
+            module = self.equipment_lib.get_module_or_404(module_id)
+            if not module.is_active:
+                raise HTTPException(status_code=400, detail=f"Equipment Module {module_id} is inactive")
+                
+            inverter = self.equipment_lib.get_inverter_or_404(inverter_id)
+            if not inverter.is_active:
+                raise HTTPException(status_code=400, detail=f"Equipment Inverter {inverter_id} is inactive")
+        except HTTPException as e:
+            if e.status_code == 404:
+                # Re-raise as 400 as requested for validation errors
+                raise HTTPException(status_code=400, detail=e.detail)
+            raise e
 
     def list_designs(self, tender_id: UUID) -> List[SiteDesign]:
         """List all designs for a tender."""

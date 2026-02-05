@@ -254,3 +254,14 @@ async def get_energy_estimate(
     if not estimate:
         return {"status": "not_started"}
     return estimate
+
+@router.post("/site-designs/{design_id}/recalculate")
+async def recalculate_site_design(
+    design_id: UUID,
+    site_design_service: SiteDesignService = Depends(get_site_design_service),
+):
+    """
+    Trigger recalculation of module placement.
+    """
+    result = site_design_service.recalculate_design(design_id)
+    return result

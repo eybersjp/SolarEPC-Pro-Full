@@ -16,15 +16,14 @@ class PlacementAlgorithmService:
     @staticmethod
     def _get_projection(centroid_lat: float, centroid_lon: float):
         """Get local AEA projection transformer."""
+        from pyproj import Transformer
         # WGS84 to Local AEA
         proj_str = f"+proj=aea +lat_1={centroid_lat} +lat_2={centroid_lat} +lat_0={centroid_lat} +lon_0={centroid_lon}"
-        wgs84 = pyproj.Proj('epsg:4326')
-        local = pyproj.Proj(proj_str)
         
-        project_to_meters = partial(pyproj.transform, wgs84, local)
-        project_to_wgs84 = partial(pyproj.transform, local, wgs84)
+        transformer_to_meters = Transformer.from_proj("epsg:4326", proj_str, always_xy=True)
+        transformer_to_wgs84 = Transformer.from_proj(proj_str, "epsg:4326", always_xy=True)
         
-        return project_to_meters, project_to_wgs84
+        return transformer_to_meters.transform, transformer_to_wgs84.transform
 
     @staticmethod
     def calculate_placement(
