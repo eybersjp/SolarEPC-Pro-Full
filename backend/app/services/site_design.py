@@ -21,6 +21,7 @@ from app.utils.geojson_validator import validate_geojson_polygon, calculate_poly
 from app.services.placement_algorithm import PlacementAlgorithmService
 from app.services.tasks import calculate_placement_async
 from celery.result import AsyncResult
+from datetime import datetime
 import math
 
 class SiteDesignService:
@@ -354,6 +355,12 @@ class SiteDesignService:
             # System size
             design.system_size_kwp = (design.total_modules * module.wattage) / 1000.0
             
+            # Status and calculation timestamp
+            design.placement_task_status = "completed"
+            design.placement_calculated_at = datetime.utcnow()
+            design.placement_task_id = None
+            design.placement_task_error = None
+            
             self.db.commit()
             self.db.refresh(design)
             
@@ -364,13 +371,24 @@ class SiteDesignService:
             }
         else:
             # ASYNC EXECUTION
+            # 1. Set status to pending
+            design.placement_task_status = "pending"
+            design.placement_task_error = None
+            self.db.commit()
+
+            # 2. Queue task
             task = calculate_placement_async.delay(
+                str(design.id),
                 site_boundary,
                 exclusion_zones,
                 module_dims,
                 settings
             )
             
+            # 3. Store task ID
+            design.placement_task_id = task.id
+            self.db.commit()
+
             return {
                 "mode": "async",
                 "task_id": task.id,

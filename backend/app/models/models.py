@@ -277,6 +277,12 @@ class SiteDesign(Base):
     system_size_kwp = Column(Float, default=0.0)
     site_area_sqm = Column(Float, nullable=True)
     
+    # Task Tracking
+    placement_task_id = Column(String(255), nullable=True)
+    placement_task_status = Column(String(50), nullable=True)
+    placement_task_error = Column(Text, nullable=True)
+    placement_calculated_at = Column(DateTime, nullable=True)
+    
     # Relationships
     tender = relationship("Tender", back_populates="site_designs")
     pv_design = relationship("PVDesign")

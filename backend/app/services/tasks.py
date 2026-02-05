@@ -2,22 +2,81 @@ from app.core.celery_app import celery_app
 from app.services.placement_algorithm import PlacementAlgorithmService
 from typing import Dict, Any, List
 
-@celery_app.task
+@celery_app.task(bind=True, autoretry_for=(Exception,), retry_backoff=True, retry_kwargs={'max_retries': 3})
 def calculate_placement_async(
+    self,
+    design_id: str,
     site_boundary: Dict[str, Any],
     exclusion_zones: List[Dict[str, Any]],
     module_dims: Dict[str, float],
     settings: Dict[str, Any]
 ) -> Dict[str, Any]:
     """
-    Async wrapper for placement calculation.
+    Async task for placement calculation with DB persistence.
     """
-    return PlacementAlgorithmService.calculate_placement(
-        site_boundary,
-        exclusion_zones,
-        module_dims,
-        settings
-    )
+    from app.core.database import SessionLocal
+    from app.models.models import SiteDesign, EquipmentModule
+    from uuid import UUID
+    from datetime import datetime
+    import logging
+
+    logger = logging.getLogger(__name__)
+    logger.info(f"Starting placement calculation for design {design_id}")
+
+    db = SessionLocal()
+    try:
+        # 1. Update status to running
+        design = db.query(SiteDesign).filter(SiteDesign.id == UUID(design_id)).first()
+        if not design:
+            logger.error(f"Design {design_id} not found")
+            return {"error": "Design not found"}
+
+        design.placement_task_status = "running"
+        db.commit()
+
+        # 2. Run placement
+        result = PlacementAlgorithmService.calculate_placement(
+            site_boundary,
+            exclusion_zones,
+            module_dims,
+            settings
+        )
+
+        # 3. Persist results
+        module = db.query(EquipmentModule).filter(EquipmentModule.id == design.equipment_module_id).first()
+        wattage = module.wattage if module else 0
+
+        design.module_placements = result["module_placements"]
+        design.total_modules = result["total_modules"]
+        design.system_size_kwp = (design.total_modules * wattage) / 1000.0
+        design.placement_calculated_at = datetime.utcnow()
+        design.placement_task_status = "completed"
+        design.placement_task_error = None
+        
+        db.commit()
+        logger.info(f"Successfully completed placement calculation for design {design_id}")
+        
+        return {
+            "status": "success",
+            "total_modules": design.total_modules,
+            "system_size_kwp": design.system_size_kwp
+        }
+
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error in placement calculation for design {design_id}: {str(e)}")
+        
+        # On final retry, mark as failed
+        if self.request.retries >= self.max_retries:
+            design = db.query(SiteDesign).filter(SiteDesign.id == UUID(design_id)).first()
+            if design:
+                design.placement_task_status = "failed"
+                design.placement_task_error = str(e)[:1000] # Truncate error
+                db.commit()
+        
+        raise e
+    finally:
+        db.close()
 
 
 @celery_app.task(bind=True)

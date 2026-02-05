@@ -80,6 +80,12 @@ class SiteDesignResponse(SiteDesignBase):
     system_size_kwp: float
     site_area_sqm: Optional[float] = None
     
+    # Task Tracking
+    placement_task_id: Optional[str] = None
+    placement_task_status: Optional[str] = None
+    placement_task_error: Optional[str] = None
+    placement_calculated_at: Optional[datetime] = None
+    
     created_at: datetime
     updated_at: datetime
 
