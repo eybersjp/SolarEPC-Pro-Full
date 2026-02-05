@@ -5,10 +5,12 @@ import {
     onAuthStateChanged,
     signInWithEmailAndPassword,
     createUserWithEmailAndPassword,
+    signInWithPopup,
+    GoogleAuthProvider,
     signOut,
     User as FirebaseUser
 } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { auth, googleProvider } from "@/lib/firebase";
 import { authApi } from "@/lib/api";
 import { User, LoginRequest, SignupRequest } from "@/types";
 import { useRouter } from "next/navigation";
@@ -19,6 +21,7 @@ interface AuthContextType {
     firebaseUser: FirebaseUser | null;
     loading: boolean;
     login: (credentials: LoginRequest) => Promise<void>;
+    loginWithGoogle: () => Promise<void>;
     signup: (data: SignupRequest) => Promise<void>;
     logout: () => Promise<void>;
 }
@@ -58,6 +61,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const login = async (credentials: LoginRequest) => {
         setLoading(true);
         try {
+            if (!credentials.email || !credentials.password) {
+                throw new Error("Email and password are required");
+            }
             const userCredential = await signInWithEmailAndPassword(auth, credentials.email, credentials.password);
             const token = await userCredential.user.getIdToken();
 
@@ -77,9 +83,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
     };
 
+    const loginWithGoogle = async () => {
+        setLoading(true);
+        try {
+            const userCredential = await signInWithPopup(auth, googleProvider);
+            const token = await userCredential.user.getIdToken();
+
+            // Sync with backend
+            await authApi.login({ firebase_token: token });
+
+            await fetchUserProfile();
+            toast.success("Successfully logged in with Google");
+            router.push("/");
+        } catch (error: any) {
+            console.error("Google login error:", error);
+            const message = error.response?.data?.detail || error.message || "Failed to login with Google";
+            toast.error(message);
+            throw error;
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const signup = async (data: SignupRequest) => {
         setLoading(true);
         try {
+            if (!data.email || !data.password) {
+                throw new Error("Email and password are required");
+            }
             // 1. Create user in Firebase
             const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
             const token = await userCredential.user.getIdToken();
@@ -131,7 +162,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     return (
-        <AuthContext.Provider value={{ user, firebaseUser, loading, login, signup, logout }}>
+        <AuthContext.Provider value={{ user, firebaseUser, loading, login, loginWithGoogle, signup, logout }}>
             {children}
         </AuthContext.Provider>
     );

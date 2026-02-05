@@ -28,3 +28,8 @@ httpx>=0.26.0
 
 # Utils
 python-multipart>=0.0.6
+
+# Geo
+shapely>=2.0.0
+geojson>=3.0.0
+pyproj>=3.6.0

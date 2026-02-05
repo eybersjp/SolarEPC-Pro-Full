@@ -6,10 +6,14 @@ from datetime import datetime
 from enum import Enum as PyEnum
 
 from sqlalchemy import Column, String, Float, Integer, Boolean, ForeignKey, Enum, DateTime, Text, JSON
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
+
+
+# Helper for JSONB on Postgres, JSON on others (SQLite)
+JSON_TYPE = JSON().with_variant(JSONB(), "postgresql")
 
 
 class UserRole(str, PyEnum):
@@ -40,6 +44,8 @@ class Tenant(Base):
     # Relationships
     users = relationship("User", back_populates="tenant")
     tenders = relationship("Tender", back_populates="tenant")
+    equipment_modules = relationship("EquipmentModule", back_populates="tenant")
+    equipment_inverters = relationship("EquipmentInverter", back_populates="tenant")
 
 
 class User(Base):
@@ -84,6 +90,7 @@ class Tender(Base):
     precondition = relationship("Precondition", back_populates="tender", uselist=False)
     pv_designs = relationship("PVDesign", back_populates="tender")
     boq_items = relationship("BOQItem", back_populates="tender")
+    site_designs = relationship("SiteDesign", back_populates="tender")
 
 
 class Precondition(Base):
@@ -171,3 +178,167 @@ class AuditLog(Base):
     # Relationships
     tenant = relationship("Tenant")
     user = relationship("User")
+
+
+class EquipmentModule(Base):
+    """Central + tenant-specific PV module library."""
+    __tablename__ = "equipment_modules"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tenant_id = Column(UUID(as_uuid=True), ForeignKey("tenants.id"), nullable=True)
+    
+    # Module Specifications
+    manufacturer = Column(String(255), nullable=False)
+    model = Column(String(255), nullable=False)
+    wattage = Column(Integer, nullable=False)
+    efficiency = Column(Float, nullable=False)
+    
+    # Physical Dimensions (meters)
+    length_m = Column(Float, nullable=False)
+    width_m = Column(Float, nullable=False)
+    thickness_m = Column(Float, nullable=False)
+    
+    # Electrical Specs
+    voc = Column(Float, nullable=False)  # Open circuit voltage
+    isc = Column(Float, nullable=False)  # Short circuit current
+    vmp = Column(Float, nullable=False)  # Max power voltage
+    imp = Column(Float, nullable=False)  # Max power current
+    
+    # Library Management
+    is_global = Column(Boolean, default=False)  # True = central library
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    tenant = relationship("Tenant", back_populates="equipment_modules")
+
+
+class EquipmentInverter(Base):
+    """Central + tenant-specific inverter library."""
+    __tablename__ = "equipment_inverters"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tenant_id = Column(UUID(as_uuid=True), ForeignKey("tenants.id"), nullable=True)
+    
+    # Inverter Specifications
+    manufacturer = Column(String(255), nullable=False)
+    model = Column(String(255), nullable=False)
+    capacity_kw = Column(Float, nullable=False)
+    
+    # Input Specs
+    max_dc_voltage = Column(Float, nullable=False)
+    mppt_voltage_range_min = Column(Float, nullable=False)
+    mppt_voltage_range_max = Column(Float, nullable=False)
+    max_input_current = Column(Float, nullable=False)
+    num_mppt_channels = Column(Integer, nullable=False)
+    
+    # Library Management
+    is_global = Column(Boolean, default=False)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    tenant = relationship("Tenant", back_populates="equipment_inverters")
+
+
+class SiteDesign(Base):
+    """Primary entity for map-based designs."""
+    __tablename__ = "site_designs"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tender_id = Column(UUID(as_uuid=True), ForeignKey("tenders.id"), nullable=False)
+    pv_design_id = Column(UUID(as_uuid=True), ForeignKey("pv_designs.id"), nullable=True)
+    
+    # Metadata
+    name = Column(String(255), nullable=False)
+    site_type = Column(String(50), nullable=False)  # rooftop, ground_mount, carport
+    created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Equipment Selection
+    equipment_module_id = Column(UUID(as_uuid=True), ForeignKey("equipment_modules.id"), nullable=False)
+    equipment_inverter_id = Column(UUID(as_uuid=True), ForeignKey("equipment_inverters.id"), nullable=False)
+    
+    # Geometric Data
+    site_boundary = Column(JSON_TYPE, nullable=False)
+    exclusion_zones = Column(JSON_TYPE, default=[])
+    module_placements = Column(JSON_TYPE, default=[])
+    
+    # Placement Settings
+    edge_setback_m = Column(Float, default=1.0)
+    row_spacing_m = Column(Float, default=2.0)
+    module_orientation = Column(String(20), default="portrait")
+    azimuth_deg = Column(Float, default=180.0)
+    tilt_deg = Column(Float, nullable=False)
+    
+    # Calculated Results
+    total_modules = Column(Integer, default=0)
+    system_size_kwp = Column(Float, default=0.0)
+    site_area_sqm = Column(Float, nullable=True)
+    
+    # Relationships
+    tender = relationship("Tender", back_populates="site_designs")
+    pv_design = relationship("PVDesign")
+    versions = relationship("DesignVersion", back_populates="site_design")
+    energy_estimate = relationship("EnergyEstimate", uselist=False)
+    financial_analysis = relationship("FinancialAnalysis", uselist=False)
+
+
+class DesignVersion(Base):
+    """Immutable snapshots of design state."""
+    __tablename__ = "design_versions"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    site_design_id = Column(UUID(as_uuid=True), ForeignKey("site_designs.id"), nullable=False)
+    
+    version_name = Column(String(255), nullable=False)
+    notes = Column(Text, nullable=True)
+    created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    snapshot_data = Column(JSON_TYPE, nullable=False)
+    
+    site_design = relationship("SiteDesign", back_populates="versions")
+
+
+class EnergyEstimate(Base):
+    """Cached PVWatts API results."""
+    __tablename__ = "energy_estimates"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    site_design_id = Column(UUID(as_uuid=True), ForeignKey("site_designs.id"), unique=True)
+    
+    parameter_hash = Column(String(64), nullable=False)
+    system_capacity_kw = Column(Float, nullable=False)
+    latitude = Column(Float, nullable=False)
+    longitude = Column(Float, nullable=False)
+    azimuth = Column(Float, nullable=False)
+    tilt = Column(Float, nullable=False)
+    losses_pct = Column(Float, default=14.0)
+    
+    annual_energy_kwh = Column(Float, nullable=False)
+    monthly_energy_kwh = Column(JSON_TYPE, nullable=False)
+    capacity_factor = Column(Float, nullable=False)
+    
+    status = Column(String(20), default="calculating")
+    error_message = Column(Text, nullable=True)
+    calculated_at = Column(DateTime, default=datetime.utcnow)
+
+
+class FinancialAnalysis(Base):
+    """Basic financial metrics."""
+    __tablename__ = "financial_analyses"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    site_design_id = Column(UUID(as_uuid=True), ForeignKey("site_designs.id"), unique=True)
+    
+    system_cost_usd = Column(Float, nullable=False)
+    electricity_rate_usd_per_kwh = Column(Float, nullable=False)
+    annual_rate_escalation_pct = Column(Float, default=2.0)
+    
+    annual_savings_usd = Column(Float, nullable=False)
+    simple_payback_years = Column(Float, nullable=False)
+    roi_pct = Column(Float, nullable=False)
+    
+    calculated_at = Column(DateTime, default=datetime.utcnow)

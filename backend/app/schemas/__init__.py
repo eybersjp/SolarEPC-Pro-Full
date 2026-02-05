@@ -201,3 +201,78 @@ class BOQSummary(BaseModel):
     subtotal: float
     total_margin: float
     grand_total: float
+
+
+# Equipment Schemas
+class EquipmentModuleCreate(BaseModel):
+    """Create Equipment Module."""
+    manufacturer: str = Field(..., min_length=1, max_length=255)
+    model: str = Field(..., min_length=1, max_length=255)
+    wattage: int = Field(..., gt=0)
+    efficiency: float = Field(..., ge=0, le=100)
+    
+    length_m: float = Field(..., gt=0)
+    width_m: float = Field(..., gt=0)
+    thickness_m: float = Field(..., gt=0)
+    
+    voc: float = Field(..., gt=0)
+    isc: float = Field(..., gt=0)
+    vmp: float = Field(..., gt=0)
+    imp: float = Field(..., gt=0)
+
+
+class EquipmentModuleResponse(EquipmentModuleCreate):
+    """Equipment Module response."""
+    id: UUID
+    tenant_id: Optional[UUID]
+    is_global: bool
+    is_active: bool
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
+class EquipmentInverterCreate(BaseModel):
+    """Create Equipment Inverter."""
+    manufacturer: str = Field(..., min_length=1, max_length=255)
+    model: str = Field(..., min_length=1, max_length=255)
+    capacity_kw: float = Field(..., gt=0)
+    
+    max_dc_voltage: float = Field(..., gt=0)
+    mppt_voltage_range_min: float = Field(..., gt=0)
+    mppt_voltage_range_max: float = Field(..., gt=0)
+    max_input_current: float = Field(..., gt=0)
+    num_mppt_channels: int = Field(..., gt=0)
+
+
+class EquipmentInverterResponse(EquipmentInverterCreate):
+    """Equipment Inverter response."""
+    id: UUID
+    tenant_id: Optional[UUID]
+    is_global: bool
+    is_active: bool
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
+class EquipmentSearchParams(BaseModel):
+    """Query parameters for equipment search."""
+    search_query: Optional[str] = None
+    manufacturer: Optional[str] = None
+    min_wattage: Optional[int] = None
+    max_wattage: Optional[int] = None
+
+
+# Site Design Schemas
+from .site_design import (
+    SiteDesignCreate,
+    SiteDesignUpdate,
+    SiteDesignResponse,
+    SiteTypeEnum,
+    ModuleOrientationEnum,
+    GeoJSONPolygon,
+    PlacementSettings
+)

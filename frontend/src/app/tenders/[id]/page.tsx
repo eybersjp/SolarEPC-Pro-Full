@@ -177,18 +177,34 @@ export default function TenderDetailPage() {
 
                             <div className="pt-6 border-t border-border">
                                 <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider text-muted-foreground">Project Modules</h3>
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                                     {isLoading ? (
-                                        [1, 2, 3].map((i) => (
+                                        [1, 2, 3, 4, 5].map((i) => (
                                             <Skeleton key={i} className="h-16 w-full rounded-md" />
                                         ))
                                     ) : (
                                         <>
+                                            <Link href={`/tenders/${id}/helio-prep`} className="block">
+                                                <Button variant="secondary" className="w-full justify-start h-16 text-left px-4 border-l-4 border-l-blue-500">
+                                                    <div>
+                                                        <div className="font-bold text-blue-600">HelioPrep</div>
+                                                        <div className="text-xs opacity-70 font-normal">Data Validation</div>
+                                                    </div>
+                                                </Button>
+                                            </Link>
+                                            <Link href={`/tenders/${id}/helioscope`} className="block">
+                                                <Button variant="secondary" className="w-full justify-start h-16 text-left px-4 border-l-4 border-l-orange-500">
+                                                    <div>
+                                                        <div className="font-bold text-orange-600">Auto-Helioscope</div>
+                                                        <div className="text-xs opacity-70 font-normal">Scenarios</div>
+                                                    </div>
+                                                </Button>
+                                            </Link>
                                             <Link href={`/tenders/${id}/preconditions`} className="block">
                                                 <Button variant="secondary" className="w-full justify-start h-16 text-left px-4">
                                                     <div>
                                                         <div className="font-bold">Preconditions</div>
-                                                        <div className="text-xs opacity-70">Go/No-Go Checklist</div>
+                                                        <div className="text-xs opacity-70 font-normal">Checklist</div>
                                                     </div>
                                                 </Button>
                                             </Link>
@@ -196,7 +212,7 @@ export default function TenderDetailPage() {
                                                 <Button variant="secondary" className="w-full justify-start h-16 text-left px-4">
                                                     <div>
                                                         <div className="font-bold">PV Design</div>
-                                                        <div className="text-xs opacity-70">Sizing & Layout</div>
+                                                        <div className="text-xs opacity-70 font-normal">Sizing</div>
                                                     </div>
                                                 </Button>
                                             </Link>
@@ -204,7 +220,7 @@ export default function TenderDetailPage() {
                                                 <Button variant="secondary" className="w-full justify-start h-16 text-left px-4">
                                                     <div>
                                                         <div className="font-bold">BOQ & Pricing</div>
-                                                        <div className="text-xs opacity-70">Bill of Quantities</div>
+                                                        <div className="text-xs opacity-70 font-normal">Pricing</div>
                                                     </div>
                                                 </Button>
                                             </Link>

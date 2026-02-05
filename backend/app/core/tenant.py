@@ -8,7 +8,7 @@ from uuid import UUID
 from sqlalchemy import event
 from sqlalchemy.orm import Session, Query
 
-from app.models import Tenant, User, Tender, Precondition, PVDesign, BOQItem
+from app.models import Tenant, User, Tender, Precondition, PVDesign, BOQItem, SiteDesign
 
 # Context variable to hold current tenant ID
 _current_tenant_id: ContextVar[Optional[UUID]] = ContextVar('current_tenant_id', default=None)
@@ -30,7 +30,7 @@ def clear_current_tenant() -> None:
 
 
 # Models that require tenant filtering
-TENANT_SCOPED_MODELS = {Tender, Precondition, PVDesign, BOQItem, User}
+TENANT_SCOPED_MODELS = {Tender, Precondition, PVDesign, BOQItem, User, SiteDesign}
 
 
 def apply_tenant_filter(query: Query, model) -> Query:

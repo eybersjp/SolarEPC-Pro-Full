@@ -10,7 +10,14 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.database import get_db
-from app.models import User, UserRole
+
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from app.models import User, UserRole
+else:
+    # Runtime mock/placeholder or we handle it in validation
+    # Actually we just need it for runtime checks in dependency
+    pass
 
 # Firebase Admin SDK (lazy init)
 _firebase_app = None
@@ -36,7 +43,7 @@ security = HTTPBearer(auto_error=False)
 
 class CurrentUser:
     """Container for current authenticated user context."""
-    def __init__(self, user: User, tenant_id: str):
+    def __init__(self, user: "User", tenant_id: str):
         self.user = user
         self.id = user.id
         self.email = user.email
@@ -94,6 +101,8 @@ async def get_current_user(
         )
     
     # Load user from database
+    # Local import to avoid circular dependency
+    from app.models import User
     user = db.query(User).filter(User.firebase_uid == firebase_uid).first()
     
     if not user:
@@ -116,6 +125,7 @@ def require_role(*allowed_roles: UserRole):
     Dependency factory to require specific roles.
     
     Usage:
+        # Note: Use strings or ensure UserRole is available if imported at runtime
         @router.post("/", dependencies=[Depends(require_role(UserRole.ADMIN, UserRole.PM))])
     """
     async def role_checker(current_user: CurrentUser = Depends(get_current_user)):
@@ -129,6 +139,7 @@ def require_role(*allowed_roles: UserRole):
 
 
 # Convenience dependencies for common role checks
-require_admin = require_role(UserRole.ADMIN)
-require_pm_or_above = require_role(UserRole.ADMIN, UserRole.PM)
-require_engineer_or_above = require_role(UserRole.ADMIN, UserRole.PM, UserRole.ENGINEER)
+# Using string literals to avoid circular import with app.models
+require_admin = require_role("admin")
+require_pm_or_above = require_role("admin", "pm")
+require_engineer_or_above = require_role("admin", "pm", "engineer")

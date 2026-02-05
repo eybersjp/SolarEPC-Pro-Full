@@ -9,6 +9,12 @@ from app.models.models import (
     PVDesign,
     BOQItem,
     AuditLog,
+    EquipmentModule,
+    EquipmentInverter,
+    SiteDesign,
+    DesignVersion,
+    EnergyEstimate,
+    FinancialAnalysis,
 )
 
 __all__ = [
@@ -21,4 +27,10 @@ __all__ = [
     "PVDesign",
     "BOQItem",
     "AuditLog",
+    "EquipmentModule",
+    "EquipmentInverter",
+    "SiteDesign",
+    "DesignVersion",
+    "EnergyEstimate",
+    "FinancialAnalysis",
 ]

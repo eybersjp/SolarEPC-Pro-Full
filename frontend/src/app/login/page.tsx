@@ -12,7 +12,7 @@ import Link from "next/link";
 export default function LoginPage() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
-    const { login, loading } = useAuth();
+    const { login, loginWithGoogle, loading } = useAuth();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -20,6 +20,14 @@ export default function LoginPage() {
             await login({ email, password });
         } catch (error) {
             // Error handling is handled in the context with toasts
+        }
+    };
+
+    const handleGoogleLogin = async () => {
+        try {
+            await loginWithGoogle();
+        } catch (error) {
+            // Error handled in context
         }
     };
 
@@ -109,7 +117,13 @@ export default function LoginPage() {
                         </div>
 
                         <div className="grid grid-cols-2 gap-4 w-full">
-                            <Button variant="outline" type="button" className="border-white/10 bg-white/5 text-white hover:bg-white/10 hover:text-white transition-all">
+                            <Button
+                                variant="outline"
+                                type="button"
+                                className="border-white/10 bg-white/5 text-white hover:bg-white/10 hover:text-white transition-all"
+                                onClick={handleGoogleLogin}
+                                disabled={loading}
+                            >
                                 <Chrome className="mr-2 h-4 w-4" />
                                 Google
                             </Button>

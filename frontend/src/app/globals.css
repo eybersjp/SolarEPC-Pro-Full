@@ -1,13 +1,6 @@
-
-@import "tw-animate-css";
-
-@plugin "tailwindcss-animate";
+@import "tailwindcss";
 
 @custom-variant dark (&:is(.dark *));
-
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
 
 :root {
   --color-primary: #2563eb;
@@ -249,6 +242,7 @@ body {
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }

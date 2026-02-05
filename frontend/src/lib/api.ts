@@ -19,6 +19,11 @@ import type {
     BOQItemCreate,
     BOQItemUpdate,
     BOQSummary,
+    InputDataset,
+    ValidationResult,
+    NormalizedDataset,
+    ScenarioConfig,
+    SimulationResult,
 } from "@/types";
 
 export class ApiError extends Error {
@@ -214,4 +219,30 @@ export const boqApi = {
 
         return response.blob();
     },
+};
+
+// HelioPrep API
+export const helioPrepApi = {
+    validate: (tenderId: string, data: InputDataset) =>
+        fetchApi<ValidationResult>(`/tenders/${tenderId}/helio-prep/validate`, {
+            method: "POST",
+            body: data,
+        }),
+
+    normalize: (tenderId: string, data: InputDataset) =>
+        fetchApi<NormalizedDataset>(`/tenders/${tenderId}/helio-prep/normalize`, {
+            method: "POST",
+            body: data,
+        }),
+};
+
+// Helioscope API
+export const helioscopeApi = {
+    getScenarios: (tenderId: string, annualLoadKwh?: number) =>
+        fetchApi<ScenarioConfig[]>(`/tenders/${tenderId}/helioscope/scenarios${annualLoadKwh ? `?annual_load_kwh=${annualLoadKwh}` : ''}`, {
+            method: "POST",
+        }),
+
+    getResults: (tenderId: string) =>
+        fetchApi<SimulationResult[]>(`/tenders/${tenderId}/helioscope/results`),
 };
