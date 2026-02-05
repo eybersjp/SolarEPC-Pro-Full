@@ -18,6 +18,22 @@ class BOQService:
         self.tenant_id = tenant_id
         self.user_id = user_id
         self.audit = AuditService(db)
+
+    def _trigger_recalculation(self, tender_id: UUID):
+        """Trigger financial recalculation for all designs in tender."""
+        try:
+             from app.models.models import SiteDesign
+             from app.services.financial_analysis import FinancialAnalysisService
+             
+             designs = self.db.query(SiteDesign).filter(SiteDesign.tender_id == tender_id).all()
+             fin_service = FinancialAnalysisService(self.db, self.tenant_id, self.user_id)
+             
+             for design in designs:
+                 fin_service.calculate_financials(design.id)
+        except Exception as e:
+            # Prevent BOQ operations from failing due to calculation errors
+            print(f"Financial recalculation failed: {e}")
+
     
     def list_items(self, tender_id: UUID) -> List[BOQItem]:
         """List all BOQ items for a tender."""
@@ -84,6 +100,10 @@ class BOQService:
         )
         
         return item
+        
+        self._trigger_recalculation(tender_id)
+        
+        return item
     
     def update_item(
         self,
@@ -143,6 +163,11 @@ class BOQService:
             )
         
         return item
+        
+        self.db.flush() # Ensure update is visible
+        self._trigger_recalculation(item.tender_id)
+        
+        return item
     
     def delete_item(self, item: BOQItem) -> None:
         """Delete a BOQ item."""
@@ -158,6 +183,8 @@ class BOQService:
             },
         )
         self.db.delete(item)
+        self.db.flush()
+        self._trigger_recalculation(item.tender_id)
     
     def get_summary(self, tender_id: UUID) -> dict:
         """

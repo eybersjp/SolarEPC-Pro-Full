@@ -1,0 +1,141 @@
+@page {
+    size: A4;
+    margin: 2cm;
+
+    @bottom-center {
+        content: "Page " counter(page);
+        font-family: sans-serif;
+        font-size: 10pt;
+        color: #777;
+    }
+}
+
+body {
+    font-family: 'Helvetica', 'Arial', sans-serif;
+    color: #333;
+    line-height: 1.5;
+    margin: 0;
+}
+
+.page {
+    page-break-after: always;
+}
+
+.cover-page {
+    text-align: center;
+    padding-top: 5cm;
+}
+
+.logo {
+    font-size: 24pt;
+    font-weight: bold;
+    color: #2c3e50;
+    margin-bottom: 2cm;
+}
+
+h1 {
+    font-size: 36pt;
+    color: #e67e22;
+    /* Solar Orange */
+    margin-bottom: 1cm;
+}
+
+.cover-details h2 {
+    font-size: 18pt;
+    margin-bottom: 0.5cm;
+}
+
+.footer {
+    position: absolute;
+    bottom: 2cm;
+    width: 100%;
+    text-align: center;
+    color: #999;
+}
+
+.header {
+    font-size: 20pt;
+    font-weight: bold;
+    color: #2c3e50;
+    border-bottom: 2px solid #e67e22;
+    padding-bottom: 10px;
+    margin-bottom: 30px;
+}
+
+.data-table,
+.financial-table,
+.bom-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+}
+
+.data-table th,
+.financial-table th,
+.bom-table th {
+    text-align: left;
+    padding: 10px;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #ddd;
+    font-weight: bold;
+}
+
+.data-table td,
+.financial-table td,
+.bom-table td {
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+.metrics-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 30px;
+}
+
+.metric-box {
+    background-color: #f8f9fa;
+    padding: 20px;
+    width: 45%;
+    text-align: center;
+    border-radius: 5px;
+    border: 1px solid #eee;
+}
+
+.metric-box .label {
+    display: block;
+    font-size: 10pt;
+    color: #666;
+    margin-bottom: 5px;
+}
+
+.metric-box .value {
+    display: block;
+    font-size: 18pt;
+    font-weight: bold;
+    color: #2c3e50;
+}
+
+.chart-container {
+    text-align: center;
+    margin-top: 30px;
+}
+
+.chart-container img {
+    max-width: 100%;
+    height: auto;
+}
+
+.warning {
+    color: #e74c3c;
+    font-style: italic;
+    background: #fdedec;
+    padding: 10px;
+    border-radius: 4px;
+}
+
+.note {
+    font-size: 9pt;
+    color: #777;
+    margin-top: 10px;
+}

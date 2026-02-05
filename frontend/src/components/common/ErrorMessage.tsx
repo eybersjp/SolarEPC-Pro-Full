@@ -6,12 +6,14 @@ interface ErrorMessageProps {
     title?: string;
     message: string;
     retry?: () => void;
+    action?: React.ReactNode;
 }
 
 export function ErrorMessage({
     title = "Error",
     message,
-    retry
+    retry,
+    action
 }: ErrorMessageProps) {
     return (
         <Alert variant="destructive" className="my-4">
@@ -19,16 +21,19 @@ export function ErrorMessage({
             <AlertTitle>{title}</AlertTitle>
             <AlertDescription className="mt-2 flex flex-col gap-4">
                 <p>{message}</p>
-                {retry && (
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={retry}
-                        className="w-fit"
-                    >
-                        Retry
-                    </Button>
-                )}
+                <div className="flex gap-2">
+                    {retry && (
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={retry}
+                            className="w-fit"
+                        >
+                            Retry
+                        </Button>
+                    )}
+                    {action}
+                </div>
             </AlertDescription>
         </Alert>
     );

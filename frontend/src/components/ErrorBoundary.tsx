@@ -14,7 +14,7 @@ const ErrorFallback = ({ error, resetErrorBoundary }: FallbackProps) => {
             </div>
             <h2 className="text-2xl font-bold mb-2">Something went wrong</h2>
             <p className="text-muted-foreground mb-6 max-w-md">
-                {error.message || "An unexpected error occurred. Please try again or contact support if the issue persists."}
+                {(error as any).message || "An unexpected error occurred. Please try again or contact support if the issue persists."}
             </p>
             <div className="flex gap-4">
                 <Button

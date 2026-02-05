@@ -18,7 +18,7 @@ export function useBOQ(tenderId: string | undefined) {
 
     return {
         items: query.data?.items ?? [],
-        subtotal: query.data?.total_cost ?? 0,
+        subtotal: query.data?.subtotal ?? 0,
         totalMargin: query.data?.total_margin ?? 0,
         grandTotal: query.data?.grand_total ?? 0,
         isLoading: query.isLoading,

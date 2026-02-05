@@ -24,6 +24,9 @@ class Settings(BaseSettings):
     # Firebase
     FIREBASE_PROJECT_ID: str = ""
     FIREBASE_CREDENTIALS_PATH: str = ""
+
+    # NREL PVWatts
+    PVWATTS_API_KEY: str = "DEMO_KEY"
     
     # Security
     SECRET_KEY: str = "change-me-in-production"

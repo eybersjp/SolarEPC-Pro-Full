@@ -284,6 +284,16 @@ class SiteDesign(Base):
     energy_estimate = relationship("EnergyEstimate", uselist=False)
     financial_analysis = relationship("FinancialAnalysis", uselist=False)
 
+    @property
+    def placement_settings(self):
+        return {
+            "edge_setback_m": self.edge_setback_m,
+            "row_spacing_m": self.row_spacing_m,
+            "module_orientation": self.module_orientation,
+            "azimuth_deg": self.azimuth_deg,
+            "tilt_deg": self.tilt_deg,
+        }
+
 
 class DesignVersion(Base):
     """Immutable snapshots of design state."""

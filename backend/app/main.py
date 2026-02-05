@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
-from app.api import auth, tenants, tenders, preconditions, pv_designs, boq, dashboard, helio_prep, helioscope, equipment, site_designs
+from app.api import auth, tenants, tenders, preconditions, pv_designs, boq, dashboard, helio_prep, helioscope, equipment, site_designs, financial_analysis
 
 app = FastAPI(
     title="SolarEPC Pro API",
@@ -41,5 +41,9 @@ app.include_router(boq.router, prefix="/tenders", tags=["BOQ"])
 app.include_router(helio_prep.router, prefix="/tenders", tags=["HelioPrep"])
 app.include_router(helioscope.router, prefix="/tenders", tags=["Helioscope"])
 app.include_router(equipment.router, prefix="/api/equipment", tags=["Equipment Library"])
-app.include_router(site_designs.router, prefix="", tags=["Site Designs"])
+app.include_router(site_designs.router, prefix="/api", tags=["Site Designs"])
+app.include_router(financial_analysis.router, prefix="/api", tags=["Financial Analysis"])
 app.include_router(dashboard.router, tags=["Dashboard"])
+
+from app.api import proposals
+app.include_router(proposals.router, prefix="/api", tags=["Proposals"])

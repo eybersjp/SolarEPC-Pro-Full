@@ -281,7 +281,13 @@ export default function TenderDetailPage() {
                         <DialogContent className="sm:max-width-[600px]">
                             <TenderForm
                                 title="Edit Tender Details"
-                                initialData={tender}
+                                initialData={{
+                                    ...tender,
+                                    client_name: tender.client_name ?? undefined,
+                                    target_capacity_kw: tender.target_capacity_kw ?? undefined,
+                                    latitude: tender.latitude ?? undefined,
+                                    longitude: tender.longitude ?? undefined,
+                                }}
                                 onSubmit={handleUpdateTender}
                                 isLoading={updateTenderMutation.isPending}
                                 onCancel={() => {

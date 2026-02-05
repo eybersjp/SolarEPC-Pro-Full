@@ -158,6 +158,12 @@ export const pvDesignsApi = {
         fetchApi<void>(`/pv-designs/${designId}`, {
             method: "DELETE",
         }),
+
+    update: (designId: string, data: Partial<PVDesignCreate>) =>
+        fetchApi<PVDesignWithValidation>(`/pv-designs/${designId}`, {
+            method: "PATCH",
+            body: data,
+        }),
 };
 
 // Preconditions API

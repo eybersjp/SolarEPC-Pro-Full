@@ -16,6 +16,10 @@ from app.schemas import (
     SiteDesignUpdate,
     SiteDesignResponse,
 )
+from app.schemas.design_version import (
+    DesignVersionCreate,
+    DesignVersionResponse,
+)
 
 router = APIRouter()
 
@@ -142,7 +146,7 @@ async def update_site_design(
 async def delete_site_design(
     design_id: UUID,
     db: Session = Depends(get_db),
-    current_user: CurrentUser = Depends(require_role(UserRole.ADMIN)),
+    current_user: CurrentUser = Depends(require_role(UserRole.ADMIN, UserRole.PM)),
     site_design_service: SiteDesignService = Depends(get_site_design_service),
 ):
     """
@@ -156,16 +160,97 @@ async def delete_site_design(
     return None
 
 
-@router.post("/site-designs/{design_id}/recalculate", status_code=status.HTTP_200_OK)
-async def recalculate_site_design(
+
+@router.post("/site-designs/{design_id}/versions", response_model=DesignVersionResponse, status_code=status.HTTP_201_CREATED)
+async def create_design_version(
     design_id: UUID,
+    request: DesignVersionCreate,
     db: Session = Depends(get_db),
-    current_user: CurrentUser = Depends(require_role(UserRole.ADMIN, UserRole.PM)),
-    site_design_service: SiteDesignService = Depends(get_site_design_service),
+    current_user: CurrentUser = Depends(require_role(UserRole.ADMIN, UserRole.PM, UserRole.ENGINEER)),
 ):
     """
-    Recalculate site design placement.
-    Returns either immediate result (sync) or task tracking info (async).
+    Create a new immutable version snapshot of the site design.
     """
-    result = site_design_service.recalculate_design(design_id)
-    return result
+    from app.services.design_version import DesignVersionService
+    
+    # We create the service instance manually or we could add a dependency.
+    # Given it's static methods, we can just use the class.
+    # But for consistency, let's keep the pattern.
+    
+    version = DesignVersionService.create_version(
+        db=db,
+        site_design_id=design_id,
+        user_id=current_user.id,
+        version_data=request
+    )
+    return DesignVersionResponse.model_validate(version)
+
+
+@router.get("/site-designs/{design_id}/versions", response_model=List[DesignVersionResponse])
+async def list_design_versions(
+    design_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(get_current_user),
+):
+    """
+    List all versions of a site design.
+    """
+    from app.services.design_version import DesignVersionService
+    
+    versions = DesignVersionService.list_versions(db, design_id)
+    return [DesignVersionResponse.model_validate(v) for v in versions]
+
+
+@router.post("/site-designs/{design_id}/restore/{version_id}", response_model=SiteDesignResponse)
+async def restore_design_version(
+    design_id: UUID,
+    version_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(require_role(UserRole.ADMIN, UserRole.PM)),
+):
+    """
+    Restore a site design to a previous version.
+    """
+    from app.services.design_version import DesignVersionService
+    
+    site_design = DesignVersionService.restore_version(
+        db=db,
+        version_id=version_id,
+        user_id=current_user.id
+    )
+    return SiteDesignResponse.model_validate(site_design)
+
+@router.post("/site-designs/{design_id}/energy-estimate", status_code=status.HTTP_202_ACCEPTED)
+async def estimate_energy(
+    design_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(require_role(UserRole.ADMIN, UserRole.PM, UserRole.ENGINEER)),
+):
+    """
+    Trigger energy estimation for a site design.
+    """
+    from app.services.energy_estimation import EnergyEstimationService
+    service = EnergyEstimationService(db)
+    try:
+        estimate = service.estimate_energy_async(design_id)
+        return {"status": "initiated", "estimate_id": str(estimate.id), "current_status": estimate.status}
+    except ValueError as e:
+        # SiteDesign not found or other issues
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail=str(e))
+
+@router.get("/site-designs/{design_id}/energy-estimate")
+async def get_energy_estimate(
+    design_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(get_current_user),
+):
+    """
+    Get energy estimate results.
+    """
+    from app.services.energy_estimation import EnergyEstimationService
+    service = EnergyEstimationService(db)
+    estimate = service.get_estimate(design_id)
+    if not estimate:
+        return {"status": "not_started"}
+    return estimate

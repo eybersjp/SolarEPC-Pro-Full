@@ -132,6 +132,15 @@ export interface PVDesignCreate {
     modules_per_string: number;
 }
 
+export interface PVDesignUpdate {
+    module_model?: string;
+    module_watt?: number;
+    inverter_model?: string;
+    inverter_kw?: number;
+    strings_per_inverter?: number;
+    modules_per_string?: number;
+}
+
 // BOQ Types
 export interface BOQItem {
     id: string;
