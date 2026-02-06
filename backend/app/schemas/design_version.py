@@ -34,3 +34,8 @@ class DesignVersionResponse(DesignVersionBase):
 
 class DesignVersionDetail(DesignVersionResponse):
     snapshot_data: Dict[str, Any]
+
+
+class DesignVersionRestoreResponse(BaseModel):
+    site_design: Any  # Usually SiteDesignResponse, but Any avoids circular import issues here
+    recalculation_status: Dict[str, Any]

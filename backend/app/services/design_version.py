@@ -1,32 +1,66 @@
 from typing import List, Optional
 from uuid import UUID
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from fastapi import HTTPException, status
 
-from app.models.models import DesignVersion, SiteDesign, AuditLog
+from app.models.models import DesignVersion, SiteDesign, Tender
 from app.schemas.design_version import DesignVersionCreate
-from app.schemas.site_design import SiteDesignUpdate
+from app.services.audit import AuditService
+from app.services.energy_estimation import EnergyEstimationService
+from app.services.financial_analysis import FinancialAnalysisService
 
 
 class DesignVersionService:
-    @staticmethod
-    def create_version(
-        db: Session, 
-        site_design_id: UUID, 
-        user_id: UUID, 
-        version_data: DesignVersionCreate
-    ) -> DesignVersion:
+    def __init__(self, db: Session, tenant_id: UUID, user_id: UUID):
+        self.db = db
+        self.tenant_id = tenant_id
+        self.user_id = user_id
+        self.audit = AuditService(db)
+
+    def _get_site_design_or_404(self, site_design_id: UUID) -> SiteDesign:
+        """Fetch site design with tenant isolation."""
+        site_design = (
+            self.db.query(SiteDesign)
+            .join(Tender)
+            .options(joinedload(SiteDesign.tender))
+            .filter(SiteDesign.id == site_design_id)
+            .filter(Tender.tenant_id == self.tenant_id)
+            .first()
+        )
+        if not site_design:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Site design {site_design_id} not found or access denied"
+            )
+        return site_design
+
+    def _get_version_or_404(self, version_id: UUID) -> DesignVersion:
+        """Fetch design version with tenant isolation."""
+        version = (
+            self.db.query(DesignVersion)
+            .join(SiteDesign)
+            .join(Tender)
+            .options(joinedload(DesignVersion.site_design).joinedload(SiteDesign.tender))
+            .filter(DesignVersion.id == version_id)
+            .filter(Tender.tenant_id == self.tenant_id)
+            .first()
+        )
+        if not version:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Design version {version_id} not found or access denied"
+            )
+        return version
+
+    def create_version(self, site_design_id: UUID, version_data: DesignVersionCreate) -> DesignVersion:
         """
         Create a new version (snapshot) of the current site design state.
         """
-        # 1. Fetch current design
-        site_design = db.query(SiteDesign).filter(SiteDesign.id == site_design_id).first()
-        if not site_design:
-            raise HTTPException(status_code=404, detail="Site design not found")
+        # 1. Fetch current design (tenant isolation handled by helper)
+        site_design = self._get_site_design_or_404(site_design_id)
 
         # 2. Construct snapshot data
-        # We include all fields that define the design's geometric and configuration state
         snapshot_data = {
             "name": site_design.name,
             "site_type": site_design.site_type,
@@ -40,7 +74,6 @@ class DesignVersionService:
             "module_orientation": site_design.module_orientation,
             "azimuth_deg": site_design.azimuth_deg,
             "tilt_deg": site_design.tilt_deg,
-            # Calculated results are also stored to avoid re-calculation if parameters match
             "total_modules": site_design.total_modules,
             "system_size_kwp": site_design.system_size_kwp,
             "site_area_sqm": site_design.site_area_sqm,
@@ -51,103 +84,181 @@ class DesignVersionService:
             site_design_id=site_design_id,
             version_name=version_data.version_name,
             notes=version_data.notes,
-            created_by=user_id,
+            created_by=self.user_id,
             snapshot_data=snapshot_data
         )
         
-        db.add(db_version)
-        db.flush() # Ensure ID is generated
+        self.db.add(db_version)
+        self.db.flush() # Ensure ID is generated
         
-        # 4. Audit Log
-        audit = AuditLog(
-            tenant_id=site_design.tender.tenant_id, # Assumes site_design.tender is loaded or lazy loaded
-            user_id=user_id,
+        # 4. Audit Log via AuditService
+        self.audit.log_create(
+            tenant_id=self.tenant_id,
+            user_id=self.user_id,
             entity_type="DesignVersion",
-            entity_id=db_version.id, 
-            action="create",
-            new_value={"version_name": version_data.version_name}
+            entity_id=db_version.id,
+            new_value={
+                "version_name": version_data.version_name,
+                "notes": version_data.notes,
+                "snapshot_keys": list(snapshot_data.keys())
+            }
         )
-        db.add(audit)
         
-        db.commit()
-        db.refresh(db_version)
+        self.db.commit()
+        self.db.refresh(db_version)
         return db_version
 
-    @staticmethod
-    def list_versions(
-        db: Session, 
-        site_design_id: UUID
-    ) -> List[DesignVersion]:
+    def list_versions(self, site_design_id: UUID) -> List[DesignVersion]:
         """
-        List all versions for a site design.
+        List all versions for a site design with tenant isolation.
         """
-        return db.query(DesignVersion).filter(
-            DesignVersion.site_design_id == site_design_id
-        ).order_by(DesignVersion.created_at.desc()).all()
+        # Optional: Log the access for compliance
+        self.audit.log(
+            tenant_id=self.tenant_id,
+            user_id=self.user_id,
+            entity_type="DesignVersion",
+            entity_id=site_design_id, # Using site_design_id as the relevant entity for the list action
+            action="list"
+        )
+        self.db.commit()
 
-    @staticmethod
-    def restore_version(
-        db: Session, 
-        version_id: UUID, 
-        user_id: UUID
-    ) -> SiteDesign:
+        return (
+            self.db.query(DesignVersion)
+            .join(SiteDesign)
+            .join(Tender)
+            .filter(DesignVersion.site_design_id == site_design_id)
+            .filter(Tender.tenant_id == self.tenant_id)
+            .order_by(DesignVersion.created_at.desc())
+            .all()
+        )
+
+    def restore_version(self, version_id: UUID, site_design_id: UUID) -> tuple[SiteDesign, dict]:
         """
         Restore a site design to a previous version's state.
         This updates the SiteDesign record with values from the snapshot.
         """
-        version = db.query(DesignVersion).filter(DesignVersion.id == version_id).first()
-        if not version:
-            raise HTTPException(status_code=404, detail="Design version not found")
-            
-        site_design = db.query(SiteDesign).filter(SiteDesign.id == version.site_design_id).first()
-        if not site_design:
-            # Should not happen due to FK, but safe check
-            raise HTTPException(status_code=404, detail="Parent site design not found")
+        # 1. Fetch version (tenant isolation handled by helper)
+        version = self._get_version_or_404(version_id)
+        
+        # Verify version belongs to the specific site design from the path
+        if version.site_design_id != site_design_id:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Design version {version_id} does not belong to site design {site_design_id}"
+            )
+
+        site_design = version.site_design
 
         snapshot = version.snapshot_data
-        print(f"DEBUG: Restoring snapshot: {snapshot}")
         
-        # Capture old state for audit
+        # 2. Capture old state for audit
         old_state = {
             "name": site_design.name,
-            "system_size_kwp": site_design.system_size_kwp
+            "site_type": site_design.site_type,
+            "equipment_module_id": str(site_design.equipment_module_id),
+            "equipment_inverter_id": str(site_design.equipment_inverter_id),
+            "site_boundary": site_design.site_boundary,
+            "exclusion_zones": site_design.exclusion_zones,
+            "module_placements": site_design.module_placements,
+            "edge_setback_m": site_design.edge_setback_m,
+            "row_spacing_m": site_design.row_spacing_m,
+            "module_orientation": site_design.module_orientation,
+            "azimuth_deg": site_design.azimuth_deg,
+            "tilt_deg": site_design.tilt_deg,
+            "total_modules": site_design.total_modules,
+            "system_size_kwp": site_design.system_size_kwp,
+            "site_area_sqm": site_design.site_area_sqm,
         }
 
-        # Update SiteDesign fields
+        # 3. Update SiteDesign fields
         site_design.name = snapshot.get("name", site_design.name) 
-        # site_type usually doesn't change easily, but if snapshot has it, we should trust it 
-        # or warn if incompatible. For now, assume consistent site_type.
         site_design.site_type = snapshot.get("site_type", site_design.site_type)
-        
         site_design.equipment_module_id = UUID(snapshot["equipment_module_id"])
         site_design.equipment_inverter_id = UUID(snapshot["equipment_inverter_id"])
-        
         site_design.site_boundary = snapshot["site_boundary"]
         site_design.exclusion_zones = snapshot.get("exclusion_zones", [])
         site_design.module_placements = snapshot.get("module_placements", [])
-        
         site_design.edge_setback_m = snapshot.get("edge_setback_m", 1.0)
         site_design.row_spacing_m = snapshot.get("row_spacing_m", 2.0)
         site_design.module_orientation = snapshot.get("module_orientation", "portrait")
         site_design.azimuth_deg = snapshot.get("azimuth_deg", 180.0)
         site_design.tilt_deg = snapshot.get("tilt_deg", 0.0)
-        
         site_design.total_modules = snapshot.get("total_modules", 0)
         site_design.system_size_kwp = snapshot.get("system_size_kwp", 0.0)
         site_design.site_area_sqm = snapshot.get("site_area_sqm")
 
-        # Create Audit Log
-        audit = AuditLog(
-            tenant_id=site_design.tender.tenant_id,
-            user_id=user_id,
+        # 4. Capture new state for audit
+        new_state = {
+            "name": site_design.name,
+            "site_type": site_design.site_type,
+            "equipment_module_id": str(site_design.equipment_module_id),
+            "equipment_inverter_id": str(site_design.equipment_inverter_id),
+            "site_boundary": site_design.site_boundary,
+            "exclusion_zones": site_design.exclusion_zones,
+            "module_placements": site_design.module_placements,
+            "edge_setback_m": site_design.edge_setback_m,
+            "row_spacing_m": site_design.row_spacing_m,
+            "module_orientation": site_design.module_orientation,
+            "azimuth_deg": site_design.azimuth_deg,
+            "tilt_deg": site_design.tilt_deg,
+            "total_modules": site_design.total_modules,
+            "system_size_kwp": site_design.system_size_kwp,
+            "site_area_sqm": site_design.site_area_sqm,
+        }
+
+        # 5. Create Audit Log via AuditService
+        self.audit.log_update(
+            tenant_id=self.tenant_id,
+            user_id=self.user_id,
             entity_type="SiteDesign",
             entity_id=site_design.id,
-            action="restore_version",
             old_value=old_state,
-            new_value={"restored_from_version_id": str(version_id)}
+            new_value={
+                "restored_from_version_id": str(version_id),
+                "restored_from_version_name": version.version_name,
+                **new_state
+            }
         )
-        db.add(audit)
         
-        db.commit()
-        db.refresh(site_design)
-        return site_design
+        self.db.commit()
+        self.db.refresh(site_design)
+
+        # 6. Trigger Recalculations if needed
+        recalc_status = {
+            "energy_estimation": "skipped",
+            "financial_analysis": "skipped"
+        }
+
+        # Parameters that affect energy estimation:
+        energy_params = [
+            "site_type", "equipment_module_id", "azimuth_deg", 
+            "tilt_deg", "system_size_kwp"
+        ]
+        
+        energy_changed = any(old_state.get(p) != new_state.get(p) for p in energy_params)
+        
+        if energy_changed:
+            energy_service = EnergyEstimationService(self.db)
+            try:
+                estimate = energy_service.estimate_energy_async(site_design.id)
+                recalc_status["energy_estimation"] = estimate.status
+            except Exception as e:
+                recalc_status["energy_estimation"] = f"error: {str(e)}"
+
+        # Financials depend on energy results and system cost (from BOQ, which might not change here, 
+        # but system size change usually implies financials should be updated)
+        if energy_changed or old_state.get("system_size_kwp") != new_state.get("system_size_kwp"):
+            financial_service = FinancialAnalysisService(self.db, self.tenant_id, self.user_id)
+            try:
+                # Note: Financial calculation is sync in the current service implementation
+                financial_service.calculate_financials(site_design.id)
+                recalc_status["financial_analysis"] = "completed"
+            except Exception as e:
+                recalc_status["financial_analysis"] = f"error: {str(e)}"
+
+        return site_design, recalc_status
+
+
+def get_design_version_service(db: Session, tenant_id: UUID, user_id: UUID) -> DesignVersionService:
+    """Factory function for DesignVersionService."""
+    return DesignVersionService(db, tenant_id, user_id)

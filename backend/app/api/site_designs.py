@@ -19,7 +19,9 @@ from app.schemas import (
 from app.schemas.design_version import (
     DesignVersionCreate,
     DesignVersionResponse,
+    DesignVersionRestoreResponse,
 )
+from app.services.design_version import DesignVersionService, get_design_version_service as create_design_version_service
 
 router = APIRouter()
 
@@ -30,6 +32,18 @@ def get_site_design_service(
 ) -> SiteDesignService:
     """Dependency to get site design service with current user context."""
     return SiteDesignService(
+        db=db,
+        tenant_id=UUID(current_user.tenant_id),
+        user_id=current_user.id,
+    )
+
+
+def get_design_version_service(
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(get_current_user),
+) -> DesignVersionService:
+    """Dependency to get design version service with current user context."""
+    return create_design_version_service(
         db=db,
         tenant_id=UUID(current_user.tenant_id),
         user_id=current_user.id,
@@ -165,22 +179,13 @@ async def delete_site_design(
 async def create_design_version(
     design_id: UUID,
     request: DesignVersionCreate,
-    db: Session = Depends(get_db),
-    current_user: CurrentUser = Depends(require_role(UserRole.ADMIN, UserRole.PM, UserRole.ENGINEER)),
+    service: DesignVersionService = Depends(get_design_version_service),
 ):
     """
     Create a new immutable version snapshot of the site design.
     """
-    from app.services.design_version import DesignVersionService
-    
-    # We create the service instance manually or we could add a dependency.
-    # Given it's static methods, we can just use the class.
-    # But for consistency, let's keep the pattern.
-    
-    version = DesignVersionService.create_version(
-        db=db,
+    version = service.create_version(
         site_design_id=design_id,
-        user_id=current_user.id,
         version_data=request
     )
     return DesignVersionResponse.model_validate(version)
@@ -189,36 +194,29 @@ async def create_design_version(
 @router.get("/site-designs/{design_id}/versions", response_model=List[DesignVersionResponse])
 async def list_design_versions(
     design_id: UUID,
-    db: Session = Depends(get_db),
-    current_user: CurrentUser = Depends(get_current_user),
+    service: DesignVersionService = Depends(get_design_version_service),
 ):
     """
     List all versions of a site design.
     """
-    from app.services.design_version import DesignVersionService
-    
-    versions = DesignVersionService.list_versions(db, design_id)
+    versions = service.list_versions(site_design_id=design_id)
     return [DesignVersionResponse.model_validate(v) for v in versions]
 
 
-@router.post("/site-designs/{design_id}/restore/{version_id}", response_model=SiteDesignResponse)
+@router.post("/site-designs/{design_id}/restore/{version_id}", response_model=DesignVersionRestoreResponse)
 async def restore_design_version(
     design_id: UUID,
     version_id: UUID,
-    db: Session = Depends(get_db),
-    current_user: CurrentUser = Depends(require_role(UserRole.ADMIN, UserRole.PM)),
+    service: DesignVersionService = Depends(get_design_version_service),
 ):
     """
     Restore a site design to a previous version.
     """
-    from app.services.design_version import DesignVersionService
-    
-    site_design = DesignVersionService.restore_version(
-        db=db,
-        version_id=version_id,
-        user_id=current_user.id
-    )
-    return SiteDesignResponse.model_validate(site_design)
+    site_design, recalc_status = service.restore_version(version_id=version_id, site_design_id=design_id)
+    return {
+        "site_design": SiteDesignResponse.model_validate(site_design),
+        "recalculation_status": recalc_status
+    }
 
 @router.post("/site-designs/{design_id}/energy-estimate", status_code=status.HTTP_202_ACCEPTED)
 async def estimate_energy(
