@@ -99,8 +99,7 @@ class BOQService:
             },
         )
         
-        return item
-        
+        self.db.flush()
         self._trigger_recalculation(tender_id)
         
         return item
@@ -161,8 +160,6 @@ class BOQService:
                 old_value=old_values,
                 new_value=new_values,
             )
-        
-        return item
         
         self.db.flush() # Ensure update is visible
         self._trigger_recalculation(item.tender_id)
