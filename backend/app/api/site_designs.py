@@ -19,6 +19,7 @@ from app.schemas import (
 from app.schemas.design_version import (
     DesignVersionCreate,
     DesignVersionResponse,
+    DesignVersionDetail,
     DesignVersionRestoreResponse,
 )
 from app.services.design_version import DesignVersionService, get_design_version_service as create_design_version_service
@@ -201,6 +202,19 @@ async def list_design_versions(
     """
     versions = service.list_versions(site_design_id=design_id)
     return [DesignVersionResponse.model_validate(v) for v in versions]
+
+
+@router.get("/site-designs/{design_id}/versions/{version_id}", response_model=DesignVersionDetail)
+async def get_design_version_detail(
+    design_id: UUID,
+    version_id: UUID,
+    service: DesignVersionService = Depends(get_design_version_service),
+):
+    """
+    Get full details of a specific design version, including the complete snapshot.
+    """
+    version = service.get_version_detail(version_id=version_id, site_design_id=design_id)
+    return DesignVersionDetail.model_validate(version)
 
 
 @router.post("/site-designs/{design_id}/restore/{version_id}", response_model=DesignVersionRestoreResponse)

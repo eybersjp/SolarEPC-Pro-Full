@@ -18,6 +18,37 @@ class DesignVersionService:
         self.user_id = user_id
         self.audit = AuditService(db)
 
+    def _validate_snapshot_data(self, snapshot_data: dict):
+        """
+        Validate presence and basic bounds for critical design parameters.
+        """
+        errors = []
+        
+        # Presence and non-empty checks
+        if not snapshot_data.get("site_boundary"):
+            errors.append("site_boundary is missing or empty")
+        
+        if not snapshot_data.get("equipment_module_id"):
+            errors.append("equipment_module_id is missing")
+            
+        if not snapshot_data.get("equipment_inverter_id"):
+            errors.append("equipment_inverter_id is missing")
+            
+        # Basic bounds checks
+        total_modules = snapshot_data.get("total_modules", 0)
+        if total_modules <= 0:
+            errors.append("total_modules must be greater than 0")
+            
+        system_size_kwp = snapshot_data.get("system_size_kwp", 0.0)
+        if system_size_kwp <= 0:
+            errors.append("system_size_kwp must be greater than 0")
+            
+        if errors:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid snapshot data: {', '.join(errors)}"
+            )
+
     def _get_site_design_or_404(self, site_design_id: UUID) -> SiteDesign:
         """Fetch site design with tenant isolation."""
         site_design = (
@@ -79,6 +110,40 @@ class DesignVersionService:
             "site_area_sqm": site_design.site_area_sqm,
         }
 
+        # 2.1 Validate Snapshot
+        self._validate_snapshot_data(snapshot_data)
+
+        # 2.2 Fetch Energy Estimate
+        energy_service = EnergyEstimationService(self.db)
+        energy_est = energy_service.get_estimate(site_design_id)
+        if energy_est:
+            snapshot_data["energy_estimate"] = {
+                "status": energy_est.status,
+                "annual_energy_kwh": energy_est.annual_energy_kwh,
+                "monthly_energy_kwh": energy_est.monthly_energy_kwh,
+                "capacity_factor": energy_est.capacity_factor,
+                "calculated_at": energy_est.calculated_at.isoformat() if energy_est.calculated_at else None,
+                "error_message": energy_est.error_message
+            }
+        else:
+            snapshot_data["energy_estimate"] = None
+
+        # 2.3 Fetch Financial Analysis
+        financial_service = FinancialAnalysisService(self.db, self.tenant_id, self.user_id)
+        fin_analysis = financial_service.get_analysis(site_design_id)
+        if fin_analysis:
+            snapshot_data["financial_analysis"] = {
+                "system_cost_usd": fin_analysis.system_cost_usd,
+                "electricity_rate_usd_per_kwh": fin_analysis.electricity_rate_usd_per_kwh,
+                "annual_rate_escalation_pct": fin_analysis.annual_rate_escalation_pct,
+                "annual_savings_usd": fin_analysis.annual_savings_usd,
+                "simple_payback_years": fin_analysis.simple_payback_years,
+                "roi_pct": fin_analysis.roi_pct,
+                "calculated_at": fin_analysis.calculated_at.isoformat() if fin_analysis.calculated_at else None
+            }
+        else:
+            snapshot_data["financial_analysis"] = None
+
         # 3. Create DesignVersion
         db_version = DesignVersion(
             site_design_id=site_design_id,
@@ -131,6 +196,20 @@ class DesignVersionService:
             .order_by(DesignVersion.created_at.desc())
             .all()
         )
+    def get_version_detail(self, version_id: UUID, site_design_id: UUID) -> DesignVersion:
+        """
+        Fetch full details (including snapshot) for a specific design version.
+        """
+        version = self._get_version_or_404(version_id)
+        
+        # Verify version belongs to the specific site design
+        if version.site_design_id != site_design_id:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Design version {version_id} does not belong to site design {site_design_id}"
+            )
+            
+        return version
 
     def restore_version(self, version_id: UUID, site_design_id: UUID) -> tuple[SiteDesign, dict]:
         """
