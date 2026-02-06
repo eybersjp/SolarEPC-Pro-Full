@@ -88,6 +88,8 @@ class EnergyEstimationService:
             existing_estimate.parameter_hash = param_hash
             existing_estimate.status = "calculating"
             existing_estimate.error_message = None
+            existing_estimate.retry_count = 0
+            existing_estimate.last_retry_at = None
             existing_estimate.calculated_at = datetime.utcnow()
             # Update params stored in model
             existing_estimate.system_capacity_kw = params["system_capacity"]
@@ -109,6 +111,8 @@ class EnergyEstimationService:
                 azimuth=params["azimuth"],
                 tilt=params["tilt"],
                 status="calculating",
+                retry_count=0,
+                last_retry_at=None,
                 annual_energy_kwh=0,
                 monthly_energy_kwh={},
                 capacity_factor=0

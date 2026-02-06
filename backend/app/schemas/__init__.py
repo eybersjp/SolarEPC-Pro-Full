@@ -275,6 +275,4 @@ from .site_design import (
     ModuleOrientationEnum,
     GeoJSONPolygon,
     PlacementSettings,
-    PlacementTaskStatusResponse,
-    RecalculateResponse
 )

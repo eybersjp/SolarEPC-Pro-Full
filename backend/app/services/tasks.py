@@ -106,25 +106,32 @@ def generate_proposal_task(self, site_design_id: str) -> Dict[str, Any]:
 
 
 
-@celery_app.task(bind=True, autoretry_for=(Exception,), retry_backoff=True, retry_kwargs={'max_retries': 3})
+@celery_app.task(bind=True, autoretry_for=(Exception,), retry_backoff=1, retry_backoff_max=4, retry_kwargs={'max_retries': 3})
 def calculate_energy_task(self, estimate_id: str, params: Dict[str, Any]):
     """
     Async task to call PVWatts API.
     """
     import httpx
     import time
+    from datetime import datetime
     from sqlalchemy.orm import Session
     from app.core.database import SessionLocal
     from app.models.models import EnergyEstimate
     from app.core.config import settings
 
-    estimate_id_uuid = estimate_id
+    from uuid import UUID
+    estimate_id_uuid = UUID(estimate_id) if isinstance(estimate_id, str) else estimate_id
     db: Session = SessionLocal()
     try:
         estimate = db.query(EnergyEstimate).filter(EnergyEstimate.id == estimate_id_uuid).first()
         if not estimate:
             # Should not happen if called correctly
             return {"error": "Estimate record not found"}
+
+        # Increment retry count and set last_retry_at
+        estimate.retry_count += 1
+        estimate.last_retry_at = datetime.utcnow()
+        db.commit()
 
         # API Configuration
         api_key = settings.PVWATTS_API_KEY

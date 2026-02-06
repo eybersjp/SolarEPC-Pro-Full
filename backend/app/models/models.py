@@ -339,6 +339,8 @@ class EnergyEstimate(Base):
     
     status = Column(String(20), default="calculating")
     error_message = Column(Text, nullable=True)
+    retry_count = Column(Integer, nullable=False, default=0)
+    last_retry_at = Column(DateTime, nullable=True)
     calculated_at = Column(DateTime, default=datetime.utcnow)
 
 

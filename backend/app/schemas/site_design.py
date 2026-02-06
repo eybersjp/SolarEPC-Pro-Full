@@ -3,7 +3,7 @@ from enum import Enum
 from typing import List, Optional, Any, Dict
 from uuid import UUID
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, validator, ConfigDict
 
 
 class SiteTypeEnum(str, Enum):
@@ -43,6 +43,8 @@ class SiteDesignBase(BaseModel):
     
     site_boundary: Dict[str, Any] = Field(..., description="GeoJSON Polygon")
     placement_settings: PlacementSettings = Field(default_factory=PlacementSettings)
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class SiteDesignCreate(SiteDesignBase):
@@ -90,22 +92,5 @@ class SiteDesignResponse(SiteDesignBase):
     updated_at: datetime
 
 
-class PlacementTaskStatusResponse(BaseModel):
-    task_id: str
-    status: str
-    progress_percentage: float = 0.0
-    total_modules: int = 0
-    system_size_kwp: float = 0.0
-    placement_calculated_at: Optional[datetime] = None
-    error: Optional[str] = None
-    estimated_modules: Optional[int] = None
-    mode: Optional[str] = None
 
 
-class RecalculateResponse(BaseModel):
-    mode: str
-    task_id: Optional[str] = None
-    estimated_modules: Optional[int] = None
-    status: str
-    total_modules: Optional[int] = None
-    system_size_kwp: Optional[float] = None

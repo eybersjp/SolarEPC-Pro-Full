@@ -366,7 +366,9 @@ class SiteDesignService:
             
             return {
                 "mode": "sync",
-                "design": design,
+                "status": "completed",
+                "total_modules": design.total_modules,
+                "system_size_kwp": design.system_size_kwp,
                 "stats": result["stats"]
             }
         else:
