@@ -6,6 +6,7 @@ import { useSiteDesignQuery } from "@/hooks/useSiteDesigns";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { GeoJSONPolygon } from "@/types";
+import { useDesignCanvasStore } from "@/stores/useDesignCanvasStore";
 import L from "leaflet";
 
 interface GeometryLayerProps {
@@ -19,6 +20,7 @@ interface GeometryLayerProps {
  */
 export default function GeometryLayer({ designId }: GeometryLayerProps) {
     const { data: design } = useSiteDesignQuery(designId);
+    const { mode, selectedGeometry, setSelectedGeometry } = useDesignCanvasStore();
 
     // Local visibility state
     const [showBoundary, setShowBoundary] = useState(true);
@@ -33,17 +35,30 @@ export default function GeometryLayer({ designId }: GeometryLayerProps) {
         return polygon.coordinates[0].map(coord => [coord[1], coord[0]]);
     };
 
+    const isSelected = (type: 'boundary' | 'exclusion', index?: number) => {
+        if (!selectedGeometry) return false;
+        return selectedGeometry.type === type && selectedGeometry.index === index;
+    };
+
     return (
         <>
             {/* 1. Site Boundary */}
             {showBoundary && design.site_boundary && (
                 <Polygon
                     positions={polygonToLatLng(design.site_boundary)}
+                    eventHandlers={{
+                        click: () => {
+                            if (mode === 'edit') {
+                                setSelectedGeometry({ type: 'boundary' });
+                            }
+                        }
+                    }}
                     pathOptions={{
-                        color: "#3b82f6",
-                        weight: 3,
+                        color: isSelected('boundary') ? "#facc15" : "#3b82f6", // Yellow if selected
+                        weight: isSelected('boundary') ? 5 : 3,
                         fillColor: "#3b82f6",
                         fillOpacity: 0.1,
+                        className: mode === 'edit' ? "cursor-pointer" : ""
                     }}
                 />
             )}
@@ -53,12 +68,20 @@ export default function GeometryLayer({ designId }: GeometryLayerProps) {
                 <Polygon
                     key={`excl-${idx}`}
                     positions={polygonToLatLng(zone)}
+                    eventHandlers={{
+                        click: () => {
+                            if (mode === 'edit') {
+                                setSelectedGeometry({ type: 'exclusion', index: idx });
+                            }
+                        }
+                    }}
                     pathOptions={{
-                        color: "#ef4444",
-                        weight: 2,
+                        color: isSelected('exclusion', idx) ? "#facc15" : "#ef4444", // Yellow if selected
+                        weight: isSelected('exclusion', idx) ? 4 : 2,
                         fillColor: "#ef4444",
                         fillOpacity: 0.3,
-                        dashArray: "5, 10",
+                        dashArray: isSelected('exclusion', idx) ? "" : "5, 10",
+                        className: mode === 'edit' ? "cursor-pointer" : ""
                     }}
                 />
             ))}
@@ -70,7 +93,7 @@ export default function GeometryLayer({ designId }: GeometryLayerProps) {
                     data={{
                         type: "FeatureCollection",
                         features: design.module_placements
-                    }}
+                    } as any}
                     style={{
                         color: "#0d9488", // Teal
                         weight: 1,
