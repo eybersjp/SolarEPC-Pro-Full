@@ -53,9 +53,13 @@ class ProposalService:
             }
 
         # 1. Fetch Data
-        design = self.db.query(SiteDesign).filter(SiteDesign.id == site_design_id).first()
+        query = self.db.query(SiteDesign).filter(SiteDesign.id == site_design_id)
+        if self.tenant_id:
+            query = query.join(Tender).filter(Tender.tenant_id == self.tenant_id)
+        
+        design = query.first()
         if not design:
-            logger.error(f"SiteDesign {site_design_id} not found")
+            logger.error(f"SiteDesign {site_design_id} not found or access denied")
             raise ValueError(f"SiteDesign {site_design_id} not found")
         
         tender = self.db.query(Tender).filter(Tender.id == design.tender_id).first()
@@ -101,48 +105,54 @@ class ProposalService:
         
         with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
             tmp_path = tmp.name
+        
+        try:
+            HTML(string=html_content, base_url=".").write_pdf(tmp_path, stylesheets=[CSS(css_path)])
+            # Save to storage
+            storage_id = self.storage.save(tmp_path, filename)
+            
+            # 5. Audit Logging
             try:
-                HTML(string=html_content, base_url=".").write_pdf(tmp_path, stylesheets=[CSS(css_path)])
-                # Save to storage
-                storage_id = self.storage.save(tmp_path, filename)
-                
-                # 5. Audit Logging
-                try:
-                    t_id = self.tenant_id or tender.tenant_id
-                    u_id = self.user_id or design.created_by
-                    if t_id and u_id:
-                        audit_service = self.audit_service or AuditService(self.db)
-                        audit_service.log(
-                            tenant_id=t_id,
-                            user_id=u_id,
-                            entity_type="Proposal",
-                            entity_id=site_design_id,
-                            action="generate_pdf",
-                            new_value={
-                                "options": options,
-                                "storage_id": storage_id,
-                                "timestamp": datetime.now().isoformat()
-                            }
-                        )
-                        self.db.commit()
-                except Exception as audit_err:
-                    self.db.rollback()
-                    logger.warning(f"Audit logging failed for PDF generation: {audit_err}")
-                
-                logger.info(f"Successfully generated PDF proposal for design {site_design_id}")
-                return storage_id
-            finally:
-                if os.path.exists(tmp_path):
-                    os.remove(tmp_path)
+                t_id = self.tenant_id or tender.tenant_id
+                u_id = self.user_id or design.created_by
+                if t_id and u_id:
+                    audit_service = self.audit_service or AuditService(self.db)
+                    audit_service.log(
+                        tenant_id=t_id,
+                        user_id=u_id,
+                        entity_type="Proposal",
+                        entity_id=site_design_id,
+                        action="generate_pdf",
+                        new_value={
+                            "options": options,
+                            "storage_id": storage_id,
+                            "timestamp": datetime.now().isoformat()
+                        }
+                    )
+                    self.db.commit()
+            except Exception as audit_err:
+                self.db.rollback()
+                logger.warning(f"Audit logging failed for PDF generation: {audit_err}")
+            
+            logger.info(f"Successfully generated PDF proposal for design {site_design_id}")
+            return storage_id
+        finally:
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
 
     def generate_bom_csv(self, site_design_id: UUID) -> str:
         """
         Generate BOM CSV for a site design.
         Returns CSV string.
         """
-        design = self.db.query(SiteDesign).filter(SiteDesign.id == site_design_id).first()
+        # 1. Fetch Data
+        query = self.db.query(SiteDesign).filter(SiteDesign.id == site_design_id)
+        if self.tenant_id:
+            query = query.join(Tender).filter(Tender.tenant_id == self.tenant_id)
+            
+        design = query.first()
         if not design:
-            logger.error(f"SiteDesign {site_design_id} not found during CSV export")
+            logger.error(f"SiteDesign {site_design_id} not found or access denied")
             raise ValueError(f"SiteDesign {site_design_id} not found")
         
         tender = self.db.query(Tender).filter(Tender.id == design.tender_id).first()

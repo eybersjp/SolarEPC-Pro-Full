@@ -2,7 +2,7 @@ from datetime import datetime
 from uuid import UUID
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, status, HTTPException
 from fastapi.responses import FileResponse, PlainTextResponse
 from sqlalchemy.orm import Session
 from celery.result import AsyncResult
@@ -27,9 +27,16 @@ async def generate_proposal(
     Trigger async PDF proposal generation.
     Returns a task ID to poll.
     """
-    # Verify design exists? Service inside task checks, but better to check here too?
-    # Keeping it lightweight, let task fail if invalid id.
-    
+    # Verify design exists and belongs to tenant
+    from app.models.models import SiteDesign, Tender
+    t_id = UUID(current_user.tenant_id) if isinstance(current_user.tenant_id, str) else current_user.tenant_id
+    design = db.query(SiteDesign).join(Tender).filter(
+        SiteDesign.id == design_id,
+        Tender.tenant_id == t_id
+    ).first()
+    if not design:
+        raise HTTPException(status_code=404, detail="Design not found")
+        
     if request is None:
         request = ProposalGenerateRequest()
         
@@ -73,8 +80,12 @@ async def export_bom_csv(
     """
     Download BOM as CSV.
     """
-    service = ProposalService(db, tenant_id=current_user.tenant_id, user_id=current_user.id)
-    csv_content = service.generate_bom_csv(design_id)
+    t_id = UUID(current_user.tenant_id) if isinstance(current_user.tenant_id, str) else current_user.tenant_id
+    service = ProposalService(db, tenant_id=t_id, user_id=current_user.id)
+    try:
+        csv_content = service.generate_bom_csv(design_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
     
     timestamp = datetime.now().strftime("%Y%m%d")
     filename = f"bom_design_{design_id}_{timestamp}.csv"

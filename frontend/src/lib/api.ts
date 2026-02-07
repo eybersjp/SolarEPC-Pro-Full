@@ -24,6 +24,9 @@ import type {
     NormalizedDataset,
     ScenarioConfig,
     SimulationResult,
+    SiteDesignResponse,
+    SiteDesignCreate,
+    SiteDesignUpdate,
 } from "@/types";
 
 export class ApiError extends Error {
@@ -251,4 +254,30 @@ export const helioscopeApi = {
 
     getResults: (tenderId: string) =>
         fetchApi<SimulationResult[]>(`/tenders/${tenderId}/helioscope/results`),
+};
+
+// Site Designs API
+export const siteDesignsApi = {
+    list: (tenderId: string) =>
+        fetchApi<SiteDesignResponse[]>(`/tenders/${tenderId}/site-designs`),
+
+    get: (designId: string) =>
+        fetchApi<SiteDesignResponse>(`/site-designs/${designId}`),
+
+    create: (tenderId: string, data: SiteDesignCreate) =>
+        fetchApi<SiteDesignResponse>(`/tenders/${tenderId}/site-designs`, {
+            method: "POST",
+            body: data,
+        }),
+
+    update: (designId: string, data: SiteDesignUpdate) =>
+        fetchApi<SiteDesignResponse>(`/site-designs/${designId}`, {
+            method: "PUT",
+            body: data,
+        }),
+
+    delete: (designId: string) =>
+        fetchApi<void>(`/site-designs/${designId}`, {
+            method: "DELETE",
+        }),
 };

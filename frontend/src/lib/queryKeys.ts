@@ -54,4 +54,15 @@ export const queryKeys = {
         summary: (tenderId: string) =>
             [...queryKeys.boq.summaries(), tenderId] as const,
     },
+
+    // Site Design queries
+    siteDesigns: {
+        all: ["site-designs"] as const,
+        lists: () => [...queryKeys.siteDesigns.all, "list"] as const,
+        list: (tenderId: string) =>
+            [...queryKeys.siteDesigns.lists(), tenderId] as const,
+        details: () => [...queryKeys.siteDesigns.all, "detail"] as const,
+        detail: (designId: string) =>
+            [...queryKeys.siteDesigns.details(), designId] as const,
+    },
 } as const;

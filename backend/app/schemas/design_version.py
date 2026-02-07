@@ -16,7 +16,9 @@ class DesignVersionBase(BaseModel):
 class DesignVersionCreate(DesignVersionBase):
     pass
 
-
+class DesignVersionResponse(DesignVersionBase):
+    id: UUID
+    site_design_id: UUID
     created_at: datetime
     total_modules: Optional[int] = None
     system_size_kwp: Optional[float] = None

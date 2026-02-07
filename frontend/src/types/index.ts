@@ -270,3 +270,57 @@ export interface SimulationResult {
     error?: string;
 }
 
+// Site Design Types
+export type SiteType = 'rooftop' | 'ground_mount' | 'carport';
+export type ModuleOrientation = 'portrait' | 'landscape';
+
+export interface GeoJSONPolygon {
+    type: 'Polygon';
+    coordinates: number[][][];
+}
+
+export interface PlacementSettings {
+    edge_setback_m: number;
+    row_spacing_m: number;
+    module_orientation: ModuleOrientation;
+    azimuth_deg: number;
+    tilt_deg: number | null;
+}
+
+export interface SiteDesignBase {
+    name: string;
+    site_type: SiteType;
+    equipment_module_id: string;
+    equipment_inverter_id: string;
+    site_boundary: GeoJSONPolygon;
+    placement_settings: PlacementSettings;
+}
+
+export interface SiteDesignCreate extends SiteDesignBase { }
+
+export interface SiteDesignUpdate {
+    name?: string;
+    site_boundary?: GeoJSONPolygon;
+    exclusion_zones?: GeoJSONPolygon[];
+    equipment_module_id?: string;
+    equipment_inverter_id?: string;
+    placement_settings?: Partial<PlacementSettings>;
+    site_type?: SiteType;
+}
+
+export interface SiteDesignResponse extends SiteDesignBase {
+    id: string;
+    tender_id: string;
+    pv_design_id: string | null;
+    exclusion_zones: GeoJSONPolygon[];
+    module_placements: any[]; // Using any for GeoJSON points for now
+    total_modules: number;
+    system_size_kwp: number;
+    site_area_sqm: number | null;
+    placement_task_id: string | null;
+    placement_task_status: string | null;
+    placement_task_error: string | null;
+    placement_calculated_at: string | null;
+    created_at: string;
+    updated_at: string;
+}
