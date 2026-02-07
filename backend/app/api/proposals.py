@@ -73,7 +73,7 @@ async def export_bom_csv(
     """
     Download BOM as CSV.
     """
-    service = ProposalService(db)
+    service = ProposalService(db, tenant_id=current_user.tenant_id, user_id=current_user.id)
     csv_content = service.generate_bom_csv(design_id)
     
     timestamp = datetime.now().strftime("%Y%m%d")

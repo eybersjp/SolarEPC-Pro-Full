@@ -82,24 +82,48 @@ def calculate_placement_async(
 @celery_app.task(bind=True)
 def generate_proposal_task(self, site_design_id: str, options: Optional[Dict[str, bool]] = None) -> Dict[str, Any]:
     """
-    Async task to generate PDF proposal.
+    Async task to generate PDF proposal and return storage URL.
     """
     from app.core.database import SessionLocal
     from app.services.proposal import ProposalService
+    from app.services.storage import get_storage_backend
+    from app.models.models import SiteDesign, Tender
+    from sqlalchemy.orm import joinedload
     from uuid import UUID
-    
+    import logging
+
+    logger = logging.getLogger(__name__)
     db = SessionLocal()
     try:
-        service = ProposalService(db)
-        # Generate PDF
-        pdf_path = service.generate_pdf(UUID(site_design_id), options=options)
+        # Load design with tender context
+        design = db.query(SiteDesign).options(joinedload(SiteDesign.tender)).filter(SiteDesign.id == UUID(site_design_id)).first()
+        if not design:
+            logger.error(f"Design {site_design_id} not found for proposal task")
+            return {"status": "error", "message": "Design not found"}
+
+        tenant_id = design.tender.tenant_id if design.tender else None
+        user_id = design.created_by
         
-        # In a real app with S3, we would upload here and return the URL.
-        # For now, we return the local path.
-        # Construct a relative URL or just the path.
-        return {"status": "success", "result_url": pdf_path}
+        storage = get_storage_backend()
+        service = ProposalService(db, storage=storage, tenant_id=tenant_id, user_id=user_id)
+        
+        # Generate PDF (returns storage identifier)
+        try:
+            storage_id = service.generate_pdf(UUID(site_design_id), options=options)
+        except ValueError as ve:
+            logger.error(f"Validation error generating proposal for {site_design_id}: {ve}")
+            return {"status": "error", "message": str(ve)}
+            
+        # Get public or presigned URL
+        result_url = storage.get_url(storage_id)
+        
+        return {
+            "status": "success", 
+            "result_url": result_url,
+            "storage_id": storage_id
+        }
     except Exception as e:
-        # self.update_state(state='FAILURE', meta={'exc': str(e)}) # Celery does this automatically slightly differently
+        logger.error(f"Execution error in proposal task for {site_design_id}: {str(e)}", exc_info=True)
         raise e
     finally:
         db.close()

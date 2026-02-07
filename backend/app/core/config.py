@@ -2,6 +2,7 @@
 Application configuration using Pydantic Settings.
 """
 from typing import List
+from pydantic import model_validator
 from pydantic_settings import BaseSettings
 
 
@@ -27,6 +28,21 @@ class Settings(BaseSettings):
 
     # NREL PVWatts
     PVWATTS_API_KEY: str = "DEMO_KEY"
+
+    # Storage
+    PROPOSAL_STORAGE_BACKEND: str = "local" # "local" or "s3"
+    PROPOSAL_LOCAL_DIR: str = "generated_proposals"
+    S3_BUCKET_NAME: str = ""
+    S3_REGION: str = "us-east-1"
+    S3_ACCESS_KEY_ID: str = ""
+    S3_SECRET_ACCESS_KEY: str = ""
+    S3_PRESIGNED_URL_EXPIRATION: int = 3600 # 1 hour
+    
+    @model_validator(mode="after")
+    def validate_s3_settings(self) -> 'Settings':
+        if self.PROPOSAL_STORAGE_BACKEND == "s3" and not self.S3_BUCKET_NAME:
+            raise ValueError("S3_BUCKET_NAME is required when PROPOSAL_STORAGE_BACKEND is 's3'")
+        return self
     
     # Security
     SECRET_KEY: str = "change-me-in-production"

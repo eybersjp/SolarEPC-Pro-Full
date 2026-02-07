@@ -1,10 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <title>Solar Proposal</title>
     <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
     <!-- Cover Page -->
     {% if options.include_cover %}
@@ -28,7 +30,8 @@
         <div class="header">Site Location</div>
         <div class="content">
             <p>Site Location: {{ tender.latitude }}, {{ tender.longitude }}</p>
-            <div style="width: 100%; height: 400px; background-color: #f0f0f0; border: 1px solid #ddd; display: flex; align-items: center; justify-content: center; margin-top: 20px;">
+            <div
+                style="width: 100%; height: 400px; background-color: #f0f0f0; border: 1px solid #ddd; display: flex; align-items: center; justify-content: center; margin-top: 20px;">
                 <p>Map Placeholder: {{ tender.latitude }}, {{ tender.longitude }}</p>
             </div>
         </div>
@@ -80,15 +83,17 @@
     <div class="page">
         <div class="header">Energy Production</div>
         <div class="content">
-            {% if energy %}
+            {% if energy and energy.status == "completed" %}
             <div class="metrics-row">
                 <div class="metric-box">
                     <span class="label">Annual Energy</span>
-                    <span class="value">{{ "{:,.0f}".format(energy.annual_energy_kwh) }} kWh</span>
+                    <span class="value">{{ "{:,.0f}".format(energy.annual_energy_kwh) if energy.annual_energy_kwh else
+                        "0" }} kWh</span>
                 </div>
                 <div class="metric-box">
                     <span class="label">Capacity Factor</span>
-                    <span class="value">{{ "%.1f"|format(energy.capacity_factor) }}%</span>
+                    <span class="value">{{ "%.1f"|format(energy.capacity_factor) if energy.capacity_factor else "0.0"
+                        }}%</span>
                 </div>
             </div>
 
@@ -97,9 +102,11 @@
                 <h4>Monthly Production</h4>
                 <img src="data:image/png;base64,{{ chart_image }}" alt="Monthly Production Chart">
             </div>
+            {% else %}
+            <p class="note">Monthly production chart unavailable</p>
             {% endif %}
             {% else %}
-            <p class="warning">Energy estimate not available for this design.</p>
+            <p class="warning">Energy estimate is not yet available. Calculation may be in progress or failed.</p>
             {% endif %}
         </div>
     </div>
@@ -114,23 +121,27 @@
             <table class="financial-table">
                 <tr>
                     <th>System Cost</th>
-                    <td>${{ "{:,.2f}".format(financials.system_cost_usd) }}</td>
+                    <td>{{ "${:,.2f}".format(financials.system_cost_usd) if financials.system_cost_usd else "N/A" }}
+                    </td>
                 </tr>
                 <tr>
                     <th>Est. Annual Savings</th>
-                    <td>${{ "{:,.2f}".format(financials.annual_savings_usd) }}</td>
+                    <td>{{ "${:,.2f}".format(financials.annual_savings_usd) if financials.annual_savings_usd else "N/A"
+                        }}</td>
                 </tr>
                 <tr>
                     <th>Simple Payback</th>
-                    <td>{{ "%.1f"|format(financials.simple_payback_years) }} Years</td>
+                    <td>{{ "%.1f Years"|format(financials.simple_payback_years) if financials.simple_payback_years else
+                        "N/A" }}</td>
                 </tr>
                 <tr>
                     <th>ROI (25 Years)</th>
-                    <td>{{ "%.1f"|format(financials.roi_pct) }}%</td>
+                    <td>{{ "%.1f%%"|format(financials.roi_pct) if financials.roi_pct else "N/A" }}</td>
                 </tr>
             </table>
             {% else %}
-            <p class="warning">Financial analysis not available.</p>
+            <p class="warning">Financial analysis is not yet available. Please ensure energy estimate is completed and
+                BOQ is configured.</p>
             {% endif %}
         </div>
     </div>
@@ -141,6 +152,7 @@
     <div class="page">
         <div class="header">Bill of Materials</div>
         <div class="content">
+            {% if bom_items and bom_items|length > 0 %}
             <table class="bom-table">
                 <thead>
                     <tr>
@@ -152,16 +164,20 @@
                 <tbody>
                     {% for item in bom_items %}
                     <tr>
-                        <td>{{ item.category | title }}</td>
-                        <td>{{ item.description }}</td>
-                        <td>{{ item.quantity }}</td>
+                        <td>{{ (item.category | title) if item.category else "N/A" }}</td>
+                        <td>{{ item.description or "N/A" }}</td>
+                        <td>{{ item.quantity or "0" }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
+            {% else %}
+            <p class="warning">Bill of Materials is not yet configured for this project.</p>
+            {% endif %}
             <p class="note">* Note: Prices and labor details provided separately.</p>
         </div>
     </div>
     {% endif %}
 </body>
+
 </html>
