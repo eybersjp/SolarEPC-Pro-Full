@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
-import { ChevronRight, ChevronLeft, Settings } from "lucide-react";
+import { ChevronRight, ChevronLeft, Settings, Wrench } from "lucide-react";
 import { useDesignCanvasStore } from "@/stores/useDesignCanvasStore";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 
 export function RightPanel() {
     const { rightPanelOpen, toggleRightPanel } = useDesignCanvasStore();
@@ -32,10 +33,26 @@ export function RightPanel() {
                 </Button>
             </div>
 
-            <div className="flex-1 p-4 overflow-auto">
-                <div className="text-sm text-muted-foreground text-center mt-10">
-                    No items selected
-                </div>
+            <div className="flex-1 p-4 overflow-auto flex flex-col gap-4">
+                <Card>
+                    <CardHeader className="p-4 flex flex-row items-center gap-2 space-y-0">
+                        <Wrench className="h-4 w-4" />
+                        <CardTitle className="text-sm font-medium">Equipment</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-4 pt-0 text-xs text-muted-foreground">
+                        Equipment selection UI - Out of scope
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader className="p-4 flex flex-row items-center gap-2 space-y-0">
+                        <Settings className="h-4 w-4" />
+                        <CardTitle className="text-sm font-medium">Placement Settings</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-4 pt-0 text-xs text-muted-foreground">
+                        Placement settings UI - Out of scope
+                    </CardContent>
+                </Card>
             </div>
         </div>
     );

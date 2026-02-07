@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Save, Loader2, Check, AlertCircle } from "lucide-react";
+import { ArrowLeft, Save, Loader2, Check, AlertCircle, FileText } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useDesignCanvasStore } from "@/stores/useDesignCanvasStore";
 
@@ -54,6 +54,11 @@ export function Toolbar({ tenderId, title }: ToolbarProps) {
                 <Button variant="outline" size="sm">
                     <Save className="h-4 w-4 mr-2" />
                     Save Copy
+                </Button>
+
+                <Button variant="default" size="sm" onClick={() => console.log("Generate Proposal clicked")}>
+                    <FileText className="h-4 w-4 mr-2" />
+                    Generate Proposal
                 </Button>
             </div>
         </div>

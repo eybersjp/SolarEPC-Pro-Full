@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { MousePointer2, BoxSelect, Square, Grid } from "lucide-react";
+import { MousePointer2, Home, Mountain, Car, Ban } from "lucide-react";
 import { useDesignCanvasStore } from "@/stores/useDesignCanvasStore";
 
 export function FloatingPalette() {
@@ -7,8 +7,10 @@ export function FloatingPalette() {
 
     const tools = [
         { id: 'select', icon: MousePointer2, label: 'Select' },
-        { id: 'area', icon: Square, label: 'Draw Area' },
-        { id: 'module', icon: Grid, label: 'Modules' },
+        { id: 'roof', icon: Home, label: 'Roof' },
+        { id: 'ground', icon: Mountain, label: 'Ground' },
+        { id: 'carport', icon: Car, label: 'Carport' },
+        { id: 'exclusion', icon: Ban, label: 'Exclusion' },
     ];
 
     return (

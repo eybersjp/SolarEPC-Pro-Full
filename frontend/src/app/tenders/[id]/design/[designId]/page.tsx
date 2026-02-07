@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { CanvasLayout } from "@/components/DesignCanvas/CanvasLayout";
-import { useDesignQuery } from "@/hooks/useDesignCanvas";
+import { useSiteDesignQuery } from "@/hooks/useSiteDesigns";
 import { useDesignCanvasStore } from "@/stores/useDesignCanvasStore";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -18,7 +18,7 @@ export default function DesignPage({ params }: DesignPageProps) {
     const { id: tenderId, designId } = params;
     const router = useRouter();
 
-    const { data: design, isLoading, error } = useDesignQuery(designId);
+    const { data: design, isLoading, error } = useSiteDesignQuery(designId);
     const syncState = useDesignCanvasStore((state) => state.syncState);
 
     // Warn about unsaved changes
@@ -61,7 +61,7 @@ export default function DesignPage({ params }: DesignPageProps) {
     }
 
     return (
-        <CanvasLayout title={`Design: ${design.module_model}`} tenderId={tenderId}>
+        <CanvasLayout title={`Design: ${design.name}`} tenderId={tenderId}>
             <div className="bg-white/50 w-full h-full flex items-center justify-center border-2 border-dashed border-slate-300 rounded-lg m-4">
                 <div className="text-center text-muted-foreground">
                     <p className="text-lg font-medium mb-1">Map Area Wrapper</p>

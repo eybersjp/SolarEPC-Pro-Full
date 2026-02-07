@@ -22,6 +22,10 @@ import Link from "next/link";
 import { TenderUpdate } from "@/types";
 
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { useSiteDesignsQuery } from "@/hooks";
+import { DesignsList } from "@/components/SiteDesigns/DesignsList";
+import { Plus } from "lucide-react";
 
 export default function TenderDetailPage() {
     const { id } = useParams<{ id: string }>();
@@ -33,6 +37,7 @@ export default function TenderDetailPage() {
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
     const { tender, isLoading, error } = useTender(id);
+    const { data: designs, isLoading: isDesignsLoading } = useSiteDesignsQuery(id);
     const updateTenderMutation = useUpdateTender();
     const deleteTenderMutation = useDeleteTender();
 
@@ -121,156 +126,188 @@ export default function TenderDetailPage() {
                     </div>
                 </PageHeader>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <Card className="md:col-span-2">
-                        <CardHeader>
-                            <CardTitle>Project Overview</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-6">
-                            {isLoading ? (
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                                    {[1, 2, 3, 4].map((i) => (
-                                        <div key={i} className="space-y-2">
-                                            <Skeleton className="h-4 w-[100px]" />
-                                            <Skeleton className="h-6 w-[150px]" />
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                                    <div className="space-y-1">
-                                        <div className="flex items-center text-sm text-muted-foreground">
-                                            <User className="mr-2 h-4 w-4" />
-                                            Client Name
-                                        </div>
-                                        <p className="text-lg font-medium">{tender!.client_name || "N/A"}</p>
-                                    </div>
-                                    <div className="space-y-1">
-                                        <div className="flex items-center text-sm text-muted-foreground">
-                                            <Zap className="mr-2 h-4 w-4" />
-                                            Target Capacity
-                                        </div>
-                                        <p className="text-lg font-medium">{tender!.target_capacity_kw || 0} kW</p>
-                                    </div>
-                                    <div className="space-y-1">
-                                        <div className="flex items-center text-sm text-muted-foreground">
-                                            <MapPin className="mr-2 h-4 w-4" />
-                                            Location
-                                        </div>
-                                        <p className="text-lg font-medium">
-                                            {tender!.latitude && tender!.longitude
-                                                ? `${tender!.latitude.toFixed(4)}, ${tender!.longitude.toFixed(4)}`
-                                                : "Not specified"}
-                                        </p>
-                                    </div>
-                                    <div className="space-y-1">
-                                        <div className="flex items-center text-sm text-muted-foreground">
-                                            <Calendar className="mr-2 h-4 w-4" />
-                                            Created On
-                                        </div>
-                                        <p className="text-lg font-medium">
-                                            {format(new Date(tender!.created_at), "MMMM d, yyyy")}
-                                        </p>
-                                    </div>
-                                </div>
-                            )}
+                <Tabs defaultValue="overview" className="w-full">
+                    <TabsList className="mb-6">
+                        <TabsTrigger value="overview">Project Overview</TabsTrigger>
+                        <TabsTrigger value="designs">
+                            Designs {designs && designs.length > 0 && `(${designs.length})`}
+                        </TabsTrigger>
+                    </TabsList>
 
-                            <div className="pt-6 border-t border-border">
-                                <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider text-muted-foreground">Project Modules</h3>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                    <TabsContent value="overview">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <Card className="md:col-span-2">
+                                <CardHeader>
+                                    <CardTitle>Project Overview</CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-6">
                                     {isLoading ? (
-                                        [1, 2, 3, 4, 5].map((i) => (
-                                            <Skeleton key={i} className="h-16 w-full rounded-md" />
-                                        ))
-                                    ) : (
-                                        <>
-                                            <Link href={`/tenders/${id}/helio-prep`} className="block">
-                                                <Button variant="secondary" className="w-full justify-start h-16 text-left px-4 border-l-4 border-l-blue-500">
-                                                    <div>
-                                                        <div className="font-bold text-blue-600">HelioPrep</div>
-                                                        <div className="text-xs opacity-70 font-normal">Data Validation</div>
-                                                    </div>
-                                                </Button>
-                                            </Link>
-                                            <Link href={`/tenders/${id}/helioscope`} className="block">
-                                                <Button variant="secondary" className="w-full justify-start h-16 text-left px-4 border-l-4 border-l-orange-500">
-                                                    <div>
-                                                        <div className="font-bold text-orange-600">Auto-Helioscope</div>
-                                                        <div className="text-xs opacity-70 font-normal">Scenarios</div>
-                                                    </div>
-                                                </Button>
-                                            </Link>
-                                            <Link href={`/tenders/${id}/preconditions`} className="block">
-                                                <Button variant="secondary" className="w-full justify-start h-16 text-left px-4">
-                                                    <div>
-                                                        <div className="font-bold">Preconditions</div>
-                                                        <div className="text-xs opacity-70 font-normal">Checklist</div>
-                                                    </div>
-                                                </Button>
-                                            </Link>
-                                            <Link href={`/tenders/${id}/pv-designs`} className="block">
-                                                <Button variant="secondary" className="w-full justify-start h-16 text-left px-4">
-                                                    <div>
-                                                        <div className="font-bold">PV Design</div>
-                                                        <div className="text-xs opacity-70 font-normal">Sizing</div>
-                                                    </div>
-                                                </Button>
-                                            </Link>
-                                            <Link href={`/tenders/${id}/boq`} className="block">
-                                                <Button variant="secondary" className="w-full justify-start h-16 text-left px-4">
-                                                    <div>
-                                                        <div className="font-bold">BOQ & Pricing</div>
-                                                        <div className="text-xs opacity-70 font-normal">Pricing</div>
-                                                    </div>
-                                                </Button>
-                                            </Link>
-                                        </>
-                                    )}
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Recent Activity</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="space-y-4">
-                                {isLoading ? (
-                                    [1, 2].map((i) => (
-                                        <div key={i} className="flex items-start space-x-3">
-                                            <Skeleton className="h-2 w-2 rounded-full mt-1.5" />
-                                            <div className="space-y-1">
-                                                <Skeleton className="h-4 w-[100px]" />
-                                                <Skeleton className="h-3 w-[120px]" />
-                                            </div>
-                                        </div>
-                                    ))
-                                ) : (
-                                    <>
-                                        <div className="flex items-start space-x-3 text-sm">
-                                            <div className="h-2 w-2 rounded-full bg-primary mt-1.5" />
-                                            <div>
-                                                <p className="font-medium text-foreground">Tender created</p>
-                                                <p className="text-muted-foreground text-xs">{format(new Date(tender!.created_at), "MMM d, yyyy HH:mm")}</p>
-                                            </div>
-                                        </div>
-                                        {tender!.updated_at !== tender!.created_at && (
-                                            <div className="flex items-start space-x-3 text-sm">
-                                                <div className="h-2 w-2 rounded-full bg-secondary mt-1.5" />
-                                                <div>
-                                                    <p className="font-medium text-foreground">Tender updated</p>
-                                                    <p className="text-muted-foreground text-xs">{format(new Date(tender!.updated_at), "MMM d, yyyy HH:mm")}</p>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                            {[1, 2, 3, 4].map((i) => (
+                                                <div key={i} className="space-y-2">
+                                                    <Skeleton className="h-4 w-[100px]" />
+                                                    <Skeleton className="h-6 w-[150px]" />
                                                 </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                            <div className="space-y-1">
+                                                <div className="flex items-center text-sm text-muted-foreground">
+                                                    <User className="mr-2 h-4 w-4" />
+                                                    Client Name
+                                                </div>
+                                                <p className="text-lg font-medium">{tender!.client_name || "N/A"}</p>
                                             </div>
+                                            <div className="space-y-1">
+                                                <div className="flex items-center text-sm text-muted-foreground">
+                                                    <Zap className="mr-2 h-4 w-4" />
+                                                    Target Capacity
+                                                </div>
+                                                <p className="text-lg font-medium">{tender!.target_capacity_kw || 0} kW</p>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <div className="flex items-center text-sm text-muted-foreground">
+                                                    <MapPin className="mr-2 h-4 w-4" />
+                                                    Location
+                                                </div>
+                                                <p className="text-lg font-medium">
+                                                    {tender!.latitude && tender!.longitude
+                                                        ? `${tender!.latitude.toFixed(4)}, ${tender!.longitude.toFixed(4)}`
+                                                        : "Not specified"}
+                                                </p>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <div className="flex items-center text-sm text-muted-foreground">
+                                                    <Calendar className="mr-2 h-4 w-4" />
+                                                    Created On
+                                                </div>
+                                                <p className="text-lg font-medium">
+                                                    {format(new Date(tender!.created_at), "MMMM d, yyyy")}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <div className="pt-6 border-t border-border">
+                                        <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider text-muted-foreground">Project Modules</h3>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                                            {isLoading ? (
+                                                [1, 2, 3, 4, 5].map((i) => (
+                                                    <Skeleton key={i} className="h-16 w-full rounded-md" />
+                                                ))
+                                            ) : (
+                                                <>
+                                                    <Link href={`/tenders/${id}/helio-prep`} className="block">
+                                                        <Button variant="secondary" className="w-full justify-start h-16 text-left px-4 border-l-4 border-l-blue-500">
+                                                            <div>
+                                                                <div className="font-bold text-blue-600">HelioPrep</div>
+                                                                <div className="text-xs opacity-70 font-normal">Data Validation</div>
+                                                            </div>
+                                                        </Button>
+                                                    </Link>
+                                                    <Link href={`/tenders/${id}/helioscope`} className="block">
+                                                        <Button variant="secondary" className="w-full justify-start h-16 text-left px-4 border-l-4 border-l-orange-500">
+                                                            <div>
+                                                                <div className="font-bold text-orange-600">Auto-Helioscope</div>
+                                                                <div className="text-xs opacity-70 font-normal">Scenarios</div>
+                                                            </div>
+                                                        </Button>
+                                                    </Link>
+                                                    <Link href={`/tenders/${id}/preconditions`} className="block">
+                                                        <Button variant="secondary" className="w-full justify-start h-16 text-left px-4">
+                                                            <div>
+                                                                <div className="font-bold">Preconditions</div>
+                                                                <div className="text-xs opacity-70 font-normal">Checklist</div>
+                                                            </div>
+                                                        </Button>
+                                                    </Link>
+                                                    <Link href={`/tenders/${id}/pv-designs`} className="block">
+                                                        <Button variant="secondary" className="w-full justify-start h-16 text-left px-4">
+                                                            <div>
+                                                                <div className="font-bold">PV Design</div>
+                                                                <div className="text-xs opacity-70 font-normal">Sizing</div>
+                                                            </div>
+                                                        </Button>
+                                                    </Link>
+                                                    <Link href={`/tenders/${id}/boq`} className="block">
+                                                        <Button variant="secondary" className="w-full justify-start h-16 text-left px-4">
+                                                            <div>
+                                                                <div className="font-bold">BOQ & Pricing</div>
+                                                                <div className="text-xs opacity-70 font-normal">Pricing</div>
+                                                            </div>
+                                                        </Button>
+                                                    </Link>
+                                                </>
+                                            )}
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Recent Activity</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="space-y-4">
+                                        {isLoading ? (
+                                            [1, 2].map((i) => (
+                                                <div key={i} className="flex items-start space-x-3">
+                                                    <Skeleton className="h-2 w-2 rounded-full mt-1.5" />
+                                                    <div className="space-y-1">
+                                                        <Skeleton className="h-4 w-[100px]" />
+                                                        <Skeleton className="h-3 w-[120px]" />
+                                                    </div>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <>
+                                                <div className="flex items-start space-x-3 text-sm">
+                                                    <div className="h-2 w-2 rounded-full bg-primary mt-1.5" />
+                                                    <div>
+                                                        <p className="font-medium text-foreground">Tender created</p>
+                                                        <p className="text-muted-foreground text-xs">{format(new Date(tender!.created_at), "MMM d, yyyy HH:mm")}</p>
+                                                    </div>
+                                                </div>
+                                                {tender!.updated_at !== tender!.created_at && (
+                                                    <div className="flex items-start space-x-3 text-sm">
+                                                        <div className="h-2 w-2 rounded-full bg-secondary mt-1.5" />
+                                                        <div>
+                                                            <p className="font-medium text-foreground">Tender updated</p>
+                                                            <p className="text-muted-foreground text-xs">{format(new Date(tender!.updated_at), "MMM d, yyyy HH:mm")}</p>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </>
                                         )}
-                                    </>
-                                )}
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </div>
+                    </TabsContent>
+
+                    <TabsContent value="designs" className="space-y-6">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                            <div>
+                                <h2 className="text-xl font-bold">Site Designs</h2>
+                                <p className="text-sm text-muted-foreground">Manage and create technical site layouts</p>
                             </div>
-                        </CardContent>
-                    </Card>
-                </div>
+                            <Button asChild>
+                                <Link href={`/tenders/${id}/design/new`}>
+                                    <Plus className="mr-2 h-4 w-4" />
+                                    Create New Design
+                                </Link>
+                            </Button>
+                        </div>
+
+                        <DesignsList
+                            designs={designs}
+                            isLoading={isDesignsLoading}
+                            tenderId={id}
+                        />
+                    </TabsContent>
+                </Tabs>
 
                 {/* Edit Modal */}
                 {!isLoading && tender && (
