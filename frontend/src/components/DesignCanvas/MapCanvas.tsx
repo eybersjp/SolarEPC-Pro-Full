@@ -6,6 +6,7 @@ import { useDesignCanvasStore } from "@/stores/useDesignCanvasStore";
 import { useEffect, useRef } from "react";
 import L from "leaflet";
 import PolygonDrawingLayer from "./PolygonDrawingLayer";
+import GeometryLayer from "./GeometryLayer";
 
 interface MapCanvasProps {
     center: [number, number];
@@ -56,6 +57,7 @@ export default function MapCanvas({ center, tenderId, designId }: MapCanvasProps
                 <ZoomControl position="bottomright" />
 
                 {/* Interactive Layers */}
+                <GeometryLayer designId={designId} />
                 <PolygonDrawingLayer designId={designId} />
 
                 {/* Status Indicator (Debug/Preview) */}
