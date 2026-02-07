@@ -12,13 +12,14 @@ from app.core.security import get_current_user, require_role, CurrentUser
 from app.models import UserRole
 from app.services import tasks
 from app.services.proposal import ProposalService
-from app.schemas.proposal import ProposalTaskResponse, ProposalStatusResponse
+from app.schemas.proposal import ProposalTaskResponse, ProposalStatusResponse, ProposalGenerateRequest
 
 router = APIRouter()
 
 @router.post("/site-designs/{design_id}/proposal", response_model=ProposalTaskResponse, status_code=status.HTTP_202_ACCEPTED)
 async def generate_proposal(
     design_id: UUID,
+    request: Optional[ProposalGenerateRequest] = None,
     db: Session = Depends(get_db),
     current_user: CurrentUser = Depends(require_role(UserRole.ADMIN, UserRole.PM, UserRole.ENGINEER)),
 ):
@@ -29,7 +30,11 @@ async def generate_proposal(
     # Verify design exists? Service inside task checks, but better to check here too?
     # Keeping it lightweight, let task fail if invalid id.
     
-    task = tasks.generate_proposal_task.delay(str(design_id))
+    if request is None:
+        request = ProposalGenerateRequest()
+        
+    options = request.dict()
+    task = tasks.generate_proposal_task.delay(str(design_id), options)
     return {"task_id": task.id, "status": "PENDING"}
 
 

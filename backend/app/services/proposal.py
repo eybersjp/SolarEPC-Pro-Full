@@ -23,13 +23,23 @@ class ProposalService:
         template_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "templates")
         self.jinja_env = Environment(loader=FileSystemLoader(template_dir))
 
-    def generate_pdf(self, site_design_id: UUID) -> str:
+    def generate_pdf(self, site_design_id: UUID, options: Optional[Dict[str, bool]] = None) -> str:
         """
         Generate PDF proposal for a site design.
         Returns the path to the generated PDF.
         """
         import matplotlib.pyplot as plt
         from weasyprint import HTML, CSS
+
+        if options is None:
+            options = {
+                "include_cover": True,
+                "include_site_map": True,
+                "include_specs": True,
+                "include_energy": True,
+                "include_financials": True,
+                "include_equipment": True
+            }
 
         # 1. Fetch Data
         design = self.db.query(SiteDesign).filter(SiteDesign.id == site_design_id).first()
@@ -55,7 +65,8 @@ class ProposalService:
             financials=financials,
             bom_items=bom_items,
             chart_image=chart_b64,
-            date=datetime.now().strftime("%Y-%m-%d")
+            date=datetime.now().strftime("%Y-%m-%d"),
+            options=options
         )
 
         # 4. Convert to PDF

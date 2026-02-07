@@ -1,6 +1,6 @@
 from app.core.celery_app import celery_app
 from app.services.placement_algorithm import PlacementAlgorithmService
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 
 @celery_app.task(bind=True, autoretry_for=(Exception,), retry_backoff=True, retry_kwargs={'max_retries': 3})
 def calculate_placement_async(
@@ -80,7 +80,7 @@ def calculate_placement_async(
 
 
 @celery_app.task(bind=True)
-def generate_proposal_task(self, site_design_id: str) -> Dict[str, Any]:
+def generate_proposal_task(self, site_design_id: str, options: Optional[Dict[str, bool]] = None) -> Dict[str, Any]:
     """
     Async task to generate PDF proposal.
     """
@@ -92,7 +92,7 @@ def generate_proposal_task(self, site_design_id: str) -> Dict[str, Any]:
     try:
         service = ProposalService(db)
         # Generate PDF
-        pdf_path = service.generate_pdf(UUID(site_design_id))
+        pdf_path = service.generate_pdf(UUID(site_design_id), options=options)
         
         # In a real app with S3, we would upload here and return the URL.
         # For now, we return the local path.

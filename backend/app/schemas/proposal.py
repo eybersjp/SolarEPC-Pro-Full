@@ -5,9 +5,11 @@ from pydantic import BaseModel
 class ProposalGenerateRequest(BaseModel):
     """Configuration for proposal generation."""
     include_cover: bool = True
-    include_production: bool = True
+    include_site_map: bool = True
+    include_specs: bool = True
+    include_energy: bool = True
     include_financials: bool = True
-    include_bom: bool = True
+    include_equipment: bool = True
 
 class ProposalTaskResponse(BaseModel):
     """Response when starting a generation task."""
