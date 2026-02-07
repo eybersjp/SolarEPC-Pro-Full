@@ -27,6 +27,8 @@ import type {
     SiteDesignResponse,
     SiteDesignCreate,
     SiteDesignUpdate,
+    EquipmentModule,
+    EquipmentInverter,
 } from "@/types";
 
 export class ApiError extends Error {
@@ -280,4 +282,23 @@ export const siteDesignsApi = {
         fetchApi<void>(`/site-designs/${designId}`, {
             method: "DELETE",
         }),
+};
+
+// Equipment API
+export const equipmentApi = {
+    listModules: (filters?: { search?: string; manufacturer?: string }) => {
+        const params = new URLSearchParams();
+        if (filters?.search) params.set("search", filters.search);
+        if (filters?.manufacturer) params.set("manufacturer", filters.manufacturer);
+        const query = params.toString();
+        return fetchApi<EquipmentModule[]>(`/equipment/modules${query ? `?${query}` : ""}`);
+    },
+
+    listInverters: (filters?: { search?: string; manufacturer?: string }) => {
+        const params = new URLSearchParams();
+        if (filters?.search) params.set("search", filters.search);
+        if (filters?.manufacturer) params.set("manufacturer", filters.manufacturer);
+        const query = params.toString();
+        return fetchApi<EquipmentInverter[]>(`/equipment/inverters${query ? `?${query}` : ""}`);
+    },
 };

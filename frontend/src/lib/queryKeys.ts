@@ -65,4 +65,15 @@ export const queryKeys = {
         detail: (designId: string) =>
             [...queryKeys.siteDesigns.details(), designId] as const,
     },
+
+    // Equipment queries
+    equipment: {
+        all: ["equipment"] as const,
+        modules: () => [...queryKeys.equipment.all, "modules"] as const,
+        modulesList: (filters?: { search?: string; manufacturer?: string }) =>
+            [...queryKeys.equipment.modules(), filters] as const,
+        inverters: () => [...queryKeys.equipment.all, "inverters"] as const,
+        invertersList: (filters?: { search?: string; manufacturer?: string }) =>
+            [...queryKeys.equipment.inverters(), filters] as const,
+    },
 } as const;

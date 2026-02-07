@@ -28,8 +28,8 @@ export const useDesignCanvasStore = create<DesignCanvasState>((set) => ({
 
     setMode: (mode) => set({
         mode,
-        // Reset selection when changing modes unless entering edit
-        selectedGeometry: mode === 'edit' ? undefined : null
+        // Reset selection when changing modes
+        selectedGeometry: null
     }),
     setSelectedTool: (selectedTool) => set({ selectedTool }),
     setSelectedGeometry: (selectedGeometry) => set({ selectedGeometry }),

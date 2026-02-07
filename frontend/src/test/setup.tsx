@@ -1,4 +1,4 @@
-import '@testing-library/jest-dom'
+import '@testing-library/jest-dom/vitest'
 import { beforeAll, afterEach, afterAll, vi } from 'vitest'
 import { server } from './mocks/server'
 
@@ -19,12 +19,14 @@ afterAll(() => server.close())
 vi.mock('react-leaflet', () => ({
     MapContainer: ({ children }: any) => <div data-testid="map-container">{children}</div>,
     TileLayer: () => <div data-testid="tile-layer" />,
-    Polygon: () => <div data-testid="polygon" />,
+    Polygon: (props: any) => <div data-testid="polygon" {...props} />,
+    Polyline: (props: any) => <div data-testid="polyline" {...props} />,
+    Marker: (props: any) => <div data-testid="marker" {...props} />,
     useMap: () => ({
         addLayer: vi.fn(),
         removeLayer: vi.fn(),
-        project: vi.fn((latlng) => ({ x: latlng.lng, y: latlng.lat })),
-        unproject: vi.fn((point) => ({ lat: point.y, lng: point.x })),
+        project: vi.fn((latlng: { lat: number, lng: number }) => ({ x: latlng.lng, y: latlng.lat })),
+        unproject: vi.fn((point: { x: number, y: number }) => ({ lat: point.y, lng: point.x })),
         getBounds: vi.fn(() => ({
             getSouthWest: () => ({ lat: 0, lng: 0 }),
             getNorthEast: () => ({ lat: 10, lng: 10 }),
@@ -36,8 +38,8 @@ vi.mock('react-leaflet', () => ({
     useMapEvents: vi.fn(),
 }))
 
-vi.mock('leaflet', () => ({
-    default: {
+vi.mock('leaflet', () => {
+    const L = {
         Icon: {
             Default: {
                 prototype: {
@@ -45,13 +47,21 @@ vi.mock('leaflet', () => ({
                 },
             },
         },
-    },
-    latLng: vi.fn((lat, lng) => ({ lat, lng })),
-    polygon: vi.fn(() => ({
-        addTo: vi.fn(),
-        on: vi.fn(),
-    })),
-}))
+        latLng: vi.fn((lat: number, lng: number) => ({ lat, lng })),
+        polygon: vi.fn(() => ({
+            addTo: vi.fn(),
+            on: vi.fn(),
+        })),
+        divIcon: vi.fn(() => ({})),
+        DomEvent: {
+            stopPropagation: vi.fn(),
+        },
+    };
+    return {
+        ...L,
+        default: L,
+    };
+})
 
 // Mock ResizeObserver
 global.ResizeObserver = vi.fn().mockImplementation(() => ({
@@ -71,7 +81,7 @@ vi.mock('firebase/auth', () => ({
 // Mock matchMedia
 Object.defineProperty(window, 'matchMedia', {
     writable: true,
-    value: vi.fn().mockImplementation(query => ({
+    value: vi.fn().mockImplementation((query: string) => ({
         matches: false,
         media: query,
         onchange: null,

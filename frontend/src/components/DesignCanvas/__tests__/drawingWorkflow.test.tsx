@@ -85,6 +85,9 @@ describe('PolygonDrawingLayer Workflow', () => {
         mapEvents.click({ latlng: { lat: 0, lng: 10 } })
         mapEvents.click({ latlng: { lat: 10, lng: 0 } })
 
+        // Wait for vertices to be updated in component
+        await waitFor(() => expect(screen.queryAllByTestId('marker')).toHaveLength(4))
+
         await user.keyboard('{Enter}')
 
         // Verify blocked flow
@@ -108,6 +111,9 @@ describe('PolygonDrawingLayer Workflow', () => {
         mapEvents.click({ latlng: { lat: 0, lng: 10 } })
         mapEvents.click({ latlng: { lat: 10, lng: 0 } })
 
+        // Wait for vertex markers to appear
+        await waitFor(() => expect(screen.getAllByTestId('marker')).toHaveLength(3))
+
         await user.keyboard('{Enter}')
 
         // Wait for failure
@@ -128,6 +134,9 @@ describe('PolygonDrawingLayer Workflow', () => {
         // Click only 2 points
         mapEvents.click({ latlng: { lat: 0, lng: 0 } })
         mapEvents.click({ latlng: { lat: 0, lng: 10 } })
+
+        // Wait for vertices to be updated in component
+        await waitFor(() => expect(screen.queryAllByTestId('marker')).toHaveLength(2))
 
         await user.keyboard('{Enter}')
 

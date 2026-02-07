@@ -34,16 +34,16 @@ export function validatePolygon(polygon: GeoJSONPolygon): ValidationResult {
             return { isValid: false, error: 'Polygon must be closed (start and end points must match).' };
         }
 
-        // 4. Area Check
-        const area = turf.area(polygon);
-        if (area <= 0) {
-            return { isValid: false, error: 'Polygon must have a positive area.' };
-        }
-
-        // 5. Self-Intersection Check (Kinks)
+        // 4. Self-Intersection Check (Kinks)
         const kinks = turf.kinks(polygon as any);
         if (kinks.features.length > 0) {
             return { isValid: false, error: 'Polygon cannot self-intersect (no overlapping loops).' };
+        }
+
+        // 5. Area Check
+        const area = turf.area(polygon);
+        if (area <= 0) {
+            return { isValid: false, error: 'Polygon must have a positive area.' };
         }
 
         return { isValid: true };

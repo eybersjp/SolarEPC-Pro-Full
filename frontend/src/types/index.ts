@@ -324,3 +324,38 @@ export interface SiteDesignResponse extends SiteDesignBase {
     created_at: string;
     updated_at: string;
 }
+// Equipment Types
+export interface EquipmentModule {
+    id: string;
+    manufacturer: string;
+    model: string;
+    wattage: number;
+    efficiency: number;
+    length_m: number;
+    width_m: number;
+    thickness_m: number;
+    voc: number;
+    isc: number;
+    vmp: number;
+    imp: number;
+    tenant_id: string | null;
+    is_global: boolean;
+    is_active: boolean;
+    created_at: string;
+}
+
+export interface EquipmentInverter {
+    id: string;
+    manufacturer: string;
+    model: string;
+    capacity_kw: number;
+    max_dc_voltage: number;
+    mppt_voltage_range_min: number;
+    mppt_voltage_range_max: number;
+    max_input_current: number;
+    num_mppt_channels: number;
+    tenant_id: string | null;
+    is_global: boolean;
+    is_active: boolean;
+    created_at: string;
+}

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { renderHook, waitFor } from '@testing-library/react'
+import { renderHook, waitFor, act } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useUpdateSiteDesignMutation, useCreateSiteDesignMutation, useDeleteSiteDesignMutation } from '../useSiteDesigns'
 import { mockSiteDesign } from '../../test/fixtures/siteDesign'
@@ -30,7 +30,7 @@ const createWrapper = () => {
     return {
         queryClient,
         wrapper: ({ children }: { children: React.ReactNode }) => (
-            <QueryClientProvider client= { queryClient } > { children } </QueryClientProvider>
+            <QueryClientProvider client={queryClient} > {children} </QueryClientProvider>
         )
     }
 }
@@ -39,6 +39,23 @@ describe('useSiteDesigns hooks', () => {
     beforeEach(() => {
         vi.clearAllMocks()
         useDesignCanvasStore.setState({ syncState: 'synced' })
+        // Add a small delay to all design API calls to ensure 'syncing' state is observable
+        server.use(
+            http.post('*/api/tenders/:id/site-designs', async ({ request }) => {
+                const body = await request.json() as any
+                await new Promise(r => setTimeout(r, 20))
+                return HttpResponse.json({ ...mockSiteDesign, ...body, id: 'new-design-id' })
+            }),
+            http.put('*/api/site-designs/:id', async ({ request, params }) => {
+                const body = await request.json() as any
+                await new Promise(r => setTimeout(r, 20))
+                return HttpResponse.json({ ...mockSiteDesign, ...body, id: params.id })
+            }),
+            http.delete('*/api/site-designs/:id', async () => {
+                await new Promise(r => setTimeout(r, 20))
+                return HttpResponse.json({ message: 'Deleted' })
+            })
+        )
     })
 
     describe('useUpdateSiteDesignMutation', () => {
@@ -51,12 +68,16 @@ describe('useSiteDesigns hooks', () => {
 
             const { result } = renderHook(() => useUpdateSiteDesignMutation(designId), { wrapper })
 
-            result.current.mutate({ name: 'Updated Name' })
+            await act(async () => {
+                result.current.mutate({ name: 'Updated Name' })
+            })
 
             // Verify optimistic update
-            expect(useDesignCanvasStore.getState().syncState).toBe('syncing')
-            const optimisticData = queryClient.getQueryData<any>(queryKeys.siteDesigns.detail(designId))
-            expect(optimisticData.name).toBe('Updated Name')
+            await waitFor(() => expect(useDesignCanvasStore.getState().syncState).toBe('syncing'))
+            await waitFor(() => {
+                const optimisticData = queryClient.getQueryData<any>(queryKeys.siteDesigns.detail(designId))
+                expect(optimisticData?.name).toBe('Updated Name')
+            })
 
             await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
@@ -73,7 +94,8 @@ describe('useSiteDesigns hooks', () => {
             const designId = 'design-1'
 
             server.use(
-                http.put('*/api/site-designs/:id', () => {
+                http.put('*/api/site-designs/:id', async () => {
+                    await new Promise(r => setTimeout(r, 20))
                     return new HttpResponse(null, { status: 500 })
                 })
             )
@@ -86,13 +108,18 @@ describe('useSiteDesigns hooks', () => {
 
             const { result } = renderHook(() => useUpdateSiteDesignMutation(designId), { wrapper })
 
-            result.current.mutate({ name: 'Faulty Update' })
+            await act(async () => {
+                result.current.mutate({ name: 'Faulty Update' })
+            })
 
             // Assert syncing state
-            expect(useDesignCanvasStore.getState().syncState).toBe('syncing')
+            await waitFor(() => expect(useDesignCanvasStore.getState().syncState).toBe('syncing'))
 
             // Assert optimistic change
-            expect(queryClient.getQueryData<any>(queryKeys.siteDesigns.detail(designId)).name).toBe('Faulty Update')
+            await waitFor(() => {
+                const currentData = queryClient.getQueryData<any>(queryKeys.siteDesigns.detail(designId))
+                expect(currentData?.name).toBe('Faulty Update')
+            })
 
             await waitFor(() => expect(result.current.isError).toBe(true))
 
@@ -108,16 +135,18 @@ describe('useSiteDesigns hooks', () => {
             const { wrapper } = createWrapper()
             const { result } = renderHook(() => useCreateSiteDesignMutation('tender-1'), { wrapper })
 
-            result.current.mutate({
-                name: 'New Design',
-                site_type: 'rooftop',
-                equipment_module_id: 'mod-1',
-                equipment_inverter_id: 'inv-1',
-                site_boundary: mockSiteDesign.site_boundary,
-                placement_settings: mockSiteDesign.placement_settings,
+            await act(async () => {
+                result.current.mutate({
+                    name: 'New Design',
+                    site_type: 'rooftop',
+                    equipment_module_id: 'mod-1',
+                    equipment_inverter_id: 'inv-1',
+                    site_boundary: mockSiteDesign.site_boundary,
+                    placement_settings: mockSiteDesign.placement_settings,
+                })
             })
 
-            expect(useDesignCanvasStore.getState().syncState).toBe('syncing')
+            await waitFor(() => expect(useDesignCanvasStore.getState().syncState).toBe('syncing'))
 
             await waitFor(() => expect(result.current.isSuccess).toBe(true))
             expect(result.current.data?.id).toBe('new-design-id')
@@ -131,9 +160,11 @@ describe('useSiteDesigns hooks', () => {
             const { wrapper } = createWrapper()
             const { result } = renderHook(() => useDeleteSiteDesignMutation('tender-1'), { wrapper })
 
-            result.current.mutate('design-1')
+            await act(async () => {
+                result.current.mutate('design-1')
+            })
 
-            expect(useDesignCanvasStore.getState().syncState).toBe('syncing')
+            await waitFor(() => expect(useDesignCanvasStore.getState().syncState).toBe('syncing'))
 
             await waitFor(() => expect(result.current.isSuccess).toBe(true))
             expect(useDesignCanvasStore.getState().syncState).toBe('synced')

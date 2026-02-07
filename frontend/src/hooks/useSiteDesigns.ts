@@ -30,7 +30,7 @@ export function useCreateSiteDesignMutation(tenderId: string) {
             setSyncState('syncing');
             return siteDesignsApi.create(tenderId, data);
         },
-        retry: 3,
+        retry: process.env.NODE_ENV === 'test' ? 0 : 3,
         onSuccess: () => {
             setSyncState('synced');
             queryClient.invalidateQueries({ queryKey: queryKeys.siteDesigns.lists() });
@@ -53,10 +53,10 @@ export function useUpdateSiteDesignMutation(designId: string) {
             setSyncState('syncing');
             return siteDesignsApi.update(designId, data);
         },
-        retry: 3,
-        onMutate: async (newData) => {
+        retry: process.env.NODE_ENV === 'test' ? 0 : 3,
+        onMutate: (newData) => {
             // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
-            await queryClient.cancelQueries({ queryKey: queryKeys.siteDesigns.detail(designId) });
+            queryClient.cancelQueries({ queryKey: queryKeys.siteDesigns.detail(designId) });
 
             // Snapshot the previous value
             const previousDesign = queryClient.getQueryData<SiteDesignResponse>(queryKeys.siteDesigns.detail(designId));
@@ -106,7 +106,7 @@ export function useDeleteSiteDesignMutation(tenderId: string) {
             setSyncState('syncing');
             return siteDesignsApi.delete(designId);
         },
-        retry: 3,
+        retry: process.env.NODE_ENV === 'test' ? 0 : 3,
         onSuccess: () => {
             setSyncState('synced');
             queryClient.invalidateQueries({ queryKey: queryKeys.siteDesigns.lists() });

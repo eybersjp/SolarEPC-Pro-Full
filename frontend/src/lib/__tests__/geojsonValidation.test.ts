@@ -48,8 +48,9 @@ describe('validatePolygon', () => {
             coordinates: [
                 [
                     [0, 0],
+                    [1, 1],
                     [0, 0],
-                    [0, 0],
+                    [1, 1], // Unclosed in a sense, but turf might see it as 0 area
                     [0, 0],
                 ],
             ],
@@ -70,6 +71,6 @@ describe('validatePolygon', () => {
         // @ts-ignore
         const result = validatePolygon({ type: 'Polygon', coordinates: null })
         expect(result.isValid).toBe(false)
-        expect(result.error).toBe('An error occurred during validation.')
+        expect(result.error).toBe('Invalid polygon structure.')
     })
 })

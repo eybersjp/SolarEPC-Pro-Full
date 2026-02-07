@@ -32,8 +32,7 @@ describe('useDesignCanvasStore', () => {
         useDesignCanvasStore.getState().setSelectedGeometry({ type: 'boundary' })
         useDesignCanvasStore.getState().setMode('edit')
         expect(useDesignCanvasStore.getState().mode).toBe('edit')
-        // Reset to undefined based on current implementation
-        expect(useDesignCanvasStore.getState().selectedGeometry).toBeUndefined()
+        expect(useDesignCanvasStore.getState().selectedGeometry).toBeNull()
     })
 
     it('should setSelectedTool', () => {
