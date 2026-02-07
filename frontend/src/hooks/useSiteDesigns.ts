@@ -3,6 +3,7 @@ import { siteDesignsApi } from "@/lib/api";
 import { queryKeys } from "@/lib/queryKeys";
 import { SiteDesignCreate, SiteDesignUpdate, SiteDesignResponse } from "@/types";
 import { useDesignCanvasStore } from "@/stores/useDesignCanvasStore";
+import { toast } from "@/lib/toast";
 
 export function useSiteDesignsQuery(tenderId: string) {
     return useQuery({
@@ -34,9 +35,11 @@ export function useCreateSiteDesignMutation(tenderId: string) {
             setSyncState('synced');
             queryClient.invalidateQueries({ queryKey: queryKeys.siteDesigns.lists() });
             queryClient.invalidateQueries({ queryKey: queryKeys.tenders.detail(tenderId) });
+            toast.success("Design created successfully");
         },
-        onError: () => {
+        onError: (error: Error) => {
             setSyncState('failed');
+            toast.error(error.message || "Failed to create design");
         },
     });
 }
@@ -77,13 +80,15 @@ export function useUpdateSiteDesignMutation(designId: string) {
             queryClient.setQueryData(queryKeys.siteDesigns.detail(designId), data);
             // Also invalidate lists to ensure everything stays in sync
             queryClient.invalidateQueries({ queryKey: queryKeys.siteDesigns.lists() });
+            toast.success("Design saved");
         },
-        onError: (err, newData, context) => {
+        onError: (err: any, newData, context) => {
             setSyncState('failed');
             // If the mutation fails, use the context returned from onMutate to roll back
             if (context?.previousDesign) {
                 queryClient.setQueryData(queryKeys.siteDesigns.detail(designId), context.previousDesign);
             }
+            toast.error(err?.message || "Failed to save design");
         },
         onSettled: () => {
             // Always refetch after error or success to ensure we have the server state
@@ -106,9 +111,11 @@ export function useDeleteSiteDesignMutation(tenderId: string) {
             setSyncState('synced');
             queryClient.invalidateQueries({ queryKey: queryKeys.siteDesigns.lists() });
             queryClient.invalidateQueries({ queryKey: queryKeys.tenders.detail(tenderId) });
+            toast.success("Design deleted");
         },
-        onError: () => {
+        onError: (error: Error) => {
             setSyncState('failed');
+            toast.error(error.message || "Failed to delete design");
         },
     });
 }
