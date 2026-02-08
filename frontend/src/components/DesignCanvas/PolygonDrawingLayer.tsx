@@ -18,7 +18,7 @@ interface PolygonDrawingLayerProps {
  * Handles the interactive drawing of site boundaries and exclusion zones.
  */
 export default function PolygonDrawingLayer({ designId }: PolygonDrawingLayerProps) {
-    const { mode, selectedTool, setMode, setSelectedTool } = useDesignCanvasStore();
+    const { mode, selectedTool, setMode, setSelectedTool, hasEquipmentSelected } = useDesignCanvasStore();
     const { data: design } = useSiteDesignQuery(designId);
     const updateMutation = useUpdateSiteDesignMutation(designId);
 
@@ -84,15 +84,15 @@ export default function PolygonDrawingLayer({ designId }: PolygonDrawingLayerPro
     // Map Events
     useMapEvents({
         click(e) {
-            if (mode !== 'draw') return;
+            if (mode !== 'draw' || !hasEquipmentSelected) return;
             setVertices((prev) => [...prev, [e.latlng.lat, e.latlng.lng]]);
         },
         mousemove(e) {
-            if (mode !== 'draw' || vertices.length === 0) return;
+            if (mode !== 'draw' || vertices.length === 0 || !hasEquipmentSelected) return;
             setMousePos([e.latlng.lat, e.latlng.lng]);
         },
         dblclick(e) {
-            if (mode !== 'draw') return;
+            if (mode !== 'draw' || !hasEquipmentSelected) return;
             // Prevent map zoom on dblclick when drawing
             L.DomEvent.stopPropagation(e as any);
             completeDrawing();
@@ -102,7 +102,7 @@ export default function PolygonDrawingLayer({ designId }: PolygonDrawingLayerPro
     // Keyboard Events (Enter to complete, Escape to cancel)
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (mode !== 'draw') return;
+            if (mode !== 'draw' || !hasEquipmentSelected) return;
 
             if (e.key === 'Enter') {
                 completeDrawing();

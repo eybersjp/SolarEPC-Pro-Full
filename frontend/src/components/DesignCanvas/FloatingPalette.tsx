@@ -1,9 +1,15 @@
 import { Button } from "@/components/ui/button";
 import { MousePointer2, Home, Mountain, Car, Ban, Pencil } from "lucide-react";
 import { useDesignCanvasStore } from "@/stores/useDesignCanvasStore";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export function FloatingPalette() {
-    const { mode, selectedTool, setMode, setSelectedTool, setSelectedGeometry } = useDesignCanvasStore();
+    const { mode, selectedTool, setMode, setSelectedTool, setSelectedGeometry, hasEquipmentSelected } = useDesignCanvasStore();
 
     const tools = [
         { id: 'select', icon: MousePointer2, label: 'Select' },
@@ -15,35 +21,56 @@ export function FloatingPalette() {
     ];
 
     return (
-        <div className="absolute top-4 left-4 flex flex-col gap-2 bg-white p-2 rounded-lg shadow-lg border z-20">
-            {tools.map((tool) => (
-                <Button
-                    key={tool.id}
-                    variant={
-                        (tool.id === 'select' && mode === 'select') ||
-                            (tool.id === 'edit' && mode === 'edit') ||
-                            (selectedTool === tool.id && mode === 'draw')
-                            ? "default" : "ghost"
-                    }
-                    size="icon"
-                    onClick={() => {
-                        if (tool.id === 'select') {
-                            setMode('select');
-                            setSelectedTool(null);
-                        } else if (tool.id === 'edit') {
-                            setMode('edit');
-                            setSelectedTool(null);
-                        } else {
-                            setMode('draw');
-                            setSelectedTool(tool.id);
-                            setSelectedGeometry(null);
-                        }
-                    }}
-                    title={tool.label}
-                >
-                    <tool.icon className="h-5 w-5" />
-                </Button>
-            ))}
-        </div>
+        <TooltipProvider>
+            <div className="absolute top-4 left-4 flex flex-col gap-2 bg-white p-2 rounded-lg shadow-lg border z-20">
+                {tools.map((tool) => {
+                    const isDrawingTool = ['roof', 'ground', 'carport', 'exclusion'].includes(tool.id);
+                    const isDisabled = isDrawingTool && !hasEquipmentSelected;
+
+                    return (
+                        <Tooltip key={tool.id} delayDuration={300}>
+                            <TooltipTrigger asChild>
+                                <span>
+                                    <Button
+                                        variant={
+                                            (tool.id === 'select' && mode === 'select') ||
+                                                (tool.id === 'edit' && mode === 'edit') ||
+                                                (selectedTool === tool.id && mode === 'draw')
+                                                ? "default" : "ghost"
+                                        }
+                                        size="icon"
+                                        disabled={isDisabled}
+                                        onClick={() => {
+                                            if (isDisabled) return;
+
+                                            if (tool.id === 'select') {
+                                                setMode('select');
+                                                setSelectedTool(null);
+                                            } else if (tool.id === 'edit') {
+                                                setMode('edit');
+                                                setSelectedTool(null);
+                                            } else {
+                                                setMode('draw');
+                                                setSelectedTool(tool.id);
+                                                setSelectedGeometry(null);
+                                            }
+                                        }}
+                                        title={tool.label}
+                                        className={isDisabled ? "opacity-50 cursor-not-allowed" : ""}
+                                    >
+                                        <tool.icon className="h-5 w-5" />
+                                    </Button>
+                                </span>
+                            </TooltipTrigger>
+                            {isDisabled && (
+                                <TooltipContent side="right">
+                                    <p>Select equipment to enable drawing tools</p>
+                                </TooltipContent>
+                            )}
+                        </Tooltip>
+                    );
+                })}
+            </div>
+        </TooltipProvider>
     );
 }

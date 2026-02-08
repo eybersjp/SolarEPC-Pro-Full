@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useEffect } from "react";
+import { useDesignCanvasStore } from "@/stores/useDesignCanvasStore";
 import { useEquipmentModulesQuery, useEquipmentInvertersQuery } from "@/hooks/useEquipment";
 import { useSiteDesignQuery, useUpdateSiteDesignMutation } from "@/hooks/useSiteDesigns";
 import {
@@ -22,6 +23,11 @@ export function EquipmentSelector({ designId }: EquipmentSelectorProps) {
     const { data: modules, isLoading: isLoadingModules, error: moduleError } = useEquipmentModulesQuery();
     const { data: inverters, isLoading: isLoadingInverters, error: inverterError } = useEquipmentInvertersQuery();
     const updateMutation = useUpdateSiteDesignMutation(designId);
+    const setEquipmentSelection = useDesignCanvasStore((state) => state.setEquipmentSelection);
+
+    useEffect(() => {
+        setEquipmentSelection(design?.equipment_module_id ?? null, design?.equipment_inverter_id ?? null);
+    }, [design?.equipment_module_id, design?.equipment_inverter_id, setEquipmentSelection]);
 
     const handleModuleChange = (moduleId: string) => {
         updateMutation.mutate({ equipment_module_id: moduleId });

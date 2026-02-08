@@ -28,6 +28,7 @@ interface MapCanvasProps {
 export default function MapCanvas({ center, tenderId, designId }: MapCanvasProps) {
     const mode = useDesignCanvasStore((state) => state.mode);
     const selectedTool = useDesignCanvasStore((state) => state.selectedTool);
+    const hasEquipmentSelected = useDesignCanvasStore((state) => state.hasEquipmentSelected);
     const mapRef = useRef<L.Map | null>(null);
 
     // Monitor placement task status and fetch design data
@@ -65,7 +66,7 @@ export default function MapCanvas({ center, tenderId, designId }: MapCanvasProps
 
                 {/* Interactive Layers */}
                 <GeometryLayer designId={designId} />
-                <PolygonDrawingLayer designId={designId} />
+                {hasEquipmentSelected && <PolygonDrawingLayer designId={designId} />}
                 <PolygonEditLayer designId={designId} />
 
                 {/* UI Overlays */}
@@ -86,6 +87,8 @@ export default function MapCanvas({ center, tenderId, designId }: MapCanvasProps
                             <span className="opacity-60 mr-2">Tool:</span> {selectedTool}
                         </>
                     )}
+                    <span className="mx-2 opacity-20">|</span>
+                    <span className="opacity-60 mr-2">Equip:</span> {hasEquipmentSelected ? 'Yes' : 'No'}
                 </div>
             </MapContainer>
         </div>
