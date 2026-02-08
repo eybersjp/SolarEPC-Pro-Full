@@ -115,7 +115,7 @@ export default function DesignPage({ params }: DesignPageProps) {
     }
 
     return (
-        <CanvasLayout title={`Design: ${design.name}`} tenderId={tenderId}>
+        <CanvasLayout title={`Design: ${design.name}`} tenderId={tenderId} designId={designId}>
             <div className="w-full h-full p-4 relative overflow-hidden">
                 <div className="w-full h-full bg-slate-200 rounded-xl overflow-hidden shadow-2xl border border-white/20">
                     <MapCanvas

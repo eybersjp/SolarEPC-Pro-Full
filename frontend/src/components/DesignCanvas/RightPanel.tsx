@@ -2,8 +2,13 @@ import { Button } from "@/components/ui/button";
 import { ChevronRight, ChevronLeft, Settings, Wrench } from "lucide-react";
 import { useDesignCanvasStore } from "@/stores/useDesignCanvasStore";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { EquipmentSelector } from "./EquipmentSelector";
 
-export function RightPanel() {
+interface RightPanelProps {
+    designId: string;
+}
+
+export function RightPanel({ designId }: RightPanelProps) {
     const { rightPanelOpen, toggleRightPanel } = useDesignCanvasStore();
 
     if (!rightPanelOpen) {
@@ -39,8 +44,8 @@ export function RightPanel() {
                         <Wrench className="h-4 w-4" />
                         <CardTitle className="text-sm font-medium">Equipment</CardTitle>
                     </CardHeader>
-                    <CardContent className="p-4 pt-0 text-xs text-muted-foreground">
-                        Equipment selection UI - Out of scope
+                    <CardContent className="p-4 pt-0">
+                        <EquipmentSelector designId={designId} />
                     </CardContent>
                 </Card>
 

@@ -8,9 +8,10 @@ interface CanvasLayoutProps {
     children: ReactNode;
     title: string;
     tenderId: string;
+    designId: string;
 }
 
-export function CanvasLayout({ children, title, tenderId }: CanvasLayoutProps) {
+export function CanvasLayout({ children, title, tenderId, designId }: CanvasLayoutProps) {
     const rightPanelOpen = useDesignCanvasStore((state) => state.rightPanelOpen);
 
     return (
@@ -25,7 +26,7 @@ export function CanvasLayout({ children, title, tenderId }: CanvasLayoutProps) {
                 </div>
 
                 {/* Right Panel */}
-                <RightPanel />
+                <RightPanel designId={designId} />
             </div>
         </div>
     );
