@@ -62,7 +62,7 @@ export default function MapCanvas({ center, tenderId, designId }: MapCanvasProps
                     maxZoom={20}
                 />
 
-                <ZoomControl position="bottomright" />
+                <ZoomControl position="topright" />
 
                 {/* Interactive Layers */}
                 <GeometryLayer designId={designId} />

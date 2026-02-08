@@ -105,7 +105,7 @@ export default function GeometryLayer({ designId }: GeometryLayerProps) {
 
             {/* Visibility Controls Panel */}
             <div
-                className="absolute bottom-6 left-6 z-[500] bg-slate-900/90 backdrop-blur-md p-4 rounded-2xl shadow-2xl border border-white/10 flex flex-col gap-4 min-w-[180px] pointer-events-auto"
+                className="absolute bottom-24 left-6 z-[500] bg-slate-900/90 backdrop-blur-md p-4 rounded-2xl shadow-2xl border border-white/10 flex flex-col gap-4 min-w-[180px] pointer-events-auto"
             >
                 <div className="flex items-center gap-2 mb-1">
                     <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
