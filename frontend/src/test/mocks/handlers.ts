@@ -1,6 +1,7 @@
 import { http, HttpResponse } from 'msw'
-import { mockSiteDesign } from '../fixtures/siteDesign'
+import { mockSiteDesign, mockEnergyEstimate, mockFinancialAnalysis } from '../fixtures/siteDesign'
 import { mockModulesList, mockInvertersList } from '../fixtures/equipment'
+import { mockPVDesign } from '../fixtures/pvDesign' // Added PV Design fixture if it exists or assuming it does
 
 export const handlers = [
     // GET /api/site-designs/:id
@@ -70,5 +71,38 @@ export const handlers = [
             )
         }
         return HttpResponse.json(mockInvertersList)
+    }),
+
+    // GET /api/site-designs/:id/energy-estimate
+    http.get('*/api/site-designs/:id/energy-estimate', ({ params }) => {
+        return HttpResponse.json({
+            ...mockEnergyEstimate,
+            design_id: params.id,
+        })
+    }),
+
+    // POST /api/site-designs/:id/energy-estimate
+    http.post('*/api/site-designs/:id/energy-estimate', ({ params }) => {
+        return HttpResponse.json({
+            ...mockEnergyEstimate,
+            design_id: params.id,
+            status: 'calculating',
+        })
+    }),
+
+    // GET /api/site-designs/:id/financial-analysis
+    http.get('*/api/site-designs/:id/financial-analysis', ({ params }) => {
+        return HttpResponse.json({
+            ...mockFinancialAnalysis,
+            design_id: params.id,
+        })
+    }),
+
+    // GET /api/pv-designs/:id
+    http.get('*/api/pv-designs/:id', ({ params }) => {
+        return HttpResponse.json({
+            ...mockPVDesign,
+            id: params.id,
+        })
     }),
 ]

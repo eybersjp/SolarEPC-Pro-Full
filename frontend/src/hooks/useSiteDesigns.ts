@@ -148,18 +148,19 @@ export function useRecalculatePlacementMutation(designId: string) {
     });
 }
 
-export function useEnergyEstimateQuery(designId: string) {
-    return useQuery({
+export function useEnergyEstimateQuery(designId: string, options: any = {}) {
+    return useQuery<EnergyEstimateResponse>({
         queryKey: queryKeys.energyEstimation.detail(designId),
         queryFn: () => siteDesignsApi.getEnergyEstimate(designId),
-        enabled: !!designId,
-        refetchInterval: (query) => {
+        enabled: !!designId && !options.enabled === false,
+        refetchInterval: (query: any) => {
             const data = query.state.data;
             if (data?.status === 'calculating') {
                 return 2000;
             }
             return false;
         },
+        ...options
     });
 }
 

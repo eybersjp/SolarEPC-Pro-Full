@@ -44,3 +44,29 @@ export const createMockSiteDesign = (overrides = {}): SiteDesignResponse => ({
     ...mockSiteDesign,
     ...overrides,
 });
+
+export const mockEnergyEstimate: any = {
+    id: "energy-1",
+    design_id: "design-1",
+    status: "completed",
+    annual_energy_kwh: 1500000,
+    monthly_energy_kwh: [
+        120000, 110000, 130000, 140000, 150000, 160000,
+        155000, 145000, 135000, 125000, 115000, 105000
+    ],
+    capacity_factor: 18.2,
+    error_message: null,
+    calculated_at: new Date().toISOString(),
+};
+
+export const mockFinancialAnalysis: any = {
+    id: "financial-1",
+    design_id: "design-1",
+    system_cost_usd: 1200000,
+    electricity_rate_usd_per_kwh: 0.12,
+    annual_rate_escalation_pct: 2.5,
+    annual_savings_usd: 180000,
+    simple_payback_years: 6.7,
+    roi_pct: 15.4,
+    calculated_at: new Date().toISOString(),
+};
