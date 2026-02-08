@@ -119,3 +119,31 @@ export function useDeleteSiteDesignMutation(tenderId: string) {
         },
     });
 }
+
+export function useRecalculatePlacementMutation(designId: string) {
+    const queryClient = useQueryClient();
+    const setPlacementLoading = useDesignCanvasStore((state) => state.setPlacementLoading);
+    const setSyncState = useDesignCanvasStore((state) => state.setSyncState);
+
+    return useMutation({
+        mutationFn: async () => {
+            setPlacementLoading(true);
+            setSyncState('syncing');
+            return siteDesignsApi.recalculate(designId);
+        },
+        retry: 0,
+        onSuccess: (data) => {
+            setSyncState('synced');
+            queryClient.setQueryData(queryKeys.siteDesigns.detail(designId), data);
+            toast.success("Layout recalculated");
+        },
+        onError: (error: Error) => {
+            setSyncState('failed');
+            toast.error(error.message || "Failed to recalculate layout");
+        },
+        onSettled: () => {
+            setPlacementLoading(false);
+            queryClient.invalidateQueries({ queryKey: queryKeys.siteDesigns.detail(designId) });
+        },
+    });
+}

@@ -2,6 +2,7 @@ import { ReactNode } from "react";
 import { Toolbar } from "./Toolbar";
 import { FloatingPalette } from "./FloatingPalette";
 import { RightPanel } from "./RightPanel";
+import PlacementLoadingOverlay from "./PlacementLoadingOverlay";
 import { useDesignCanvasStore } from "@/stores/useDesignCanvasStore";
 
 interface CanvasLayoutProps {
@@ -22,6 +23,7 @@ export function CanvasLayout({ children, title, tenderId, designId }: CanvasLayo
                 {/* Main Canvas Area */}
                 <div className="flex-1 relative bg-slate-100 overflow-hidden">
                     <FloatingPalette />
+                    <PlacementLoadingOverlay />
                     {children}
                 </div>
 

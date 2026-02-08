@@ -282,6 +282,11 @@ export const siteDesignsApi = {
         fetchApi<void>(`/site-designs/${designId}`, {
             method: "DELETE",
         }),
+
+    recalculate: (designId: string) =>
+        fetchApi<SiteDesignResponse>(`/site-designs/${designId}/recalculate`, {
+            method: "POST",
+        }),
 };
 
 // Equipment API

@@ -3,6 +3,7 @@ import { ChevronRight, ChevronLeft, Settings, Wrench } from "lucide-react";
 import { useDesignCanvasStore } from "@/stores/useDesignCanvasStore";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { EquipmentSelector } from "./EquipmentSelector";
+import { PlacementSettings } from "./PlacementSettings";
 
 interface RightPanelProps {
     designId: string;
@@ -54,8 +55,8 @@ export function RightPanel({ designId }: RightPanelProps) {
                         <Settings className="h-4 w-4" />
                         <CardTitle className="text-sm font-medium">Placement Settings</CardTitle>
                     </CardHeader>
-                    <CardContent className="p-4 pt-0 text-xs text-muted-foreground">
-                        Placement settings UI - Out of scope
+                    <CardContent className="p-4 pt-0">
+                        <PlacementSettings designId={designId} />
                     </CardContent>
                 </Card>
             </div>

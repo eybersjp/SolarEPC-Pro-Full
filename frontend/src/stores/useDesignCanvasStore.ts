@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { PlacementSettings } from '@/types';
 
 interface DesignCanvasState {
     mode: 'select' | 'draw' | 'edit';
@@ -7,6 +8,7 @@ interface DesignCanvasState {
     syncState: 'pending' | 'syncing' | 'synced' | 'failed';
     placementLoading: boolean;
     rightPanelOpen: boolean;
+    placementSettings: Partial<PlacementSettings>;
 
     // Actions
     setMode: (mode: 'select' | 'draw' | 'edit') => void;
@@ -16,6 +18,7 @@ interface DesignCanvasState {
     setPlacementLoading: (loading: boolean) => void;
     setRightPanelOpen: (isOpen: boolean) => void;
     toggleRightPanel: () => void;
+    setPlacementSettings: (settings: Partial<PlacementSettings>) => void;
 }
 
 export const useDesignCanvasStore = create<DesignCanvasState>((set) => ({
@@ -25,6 +28,7 @@ export const useDesignCanvasStore = create<DesignCanvasState>((set) => ({
     syncState: 'synced',
     placementLoading: false,
     rightPanelOpen: true,
+    placementSettings: {},
 
     setMode: (mode) => set({
         mode,
@@ -37,4 +41,7 @@ export const useDesignCanvasStore = create<DesignCanvasState>((set) => ({
     setPlacementLoading: (placementLoading) => set({ placementLoading }),
     setRightPanelOpen: (rightPanelOpen) => set({ rightPanelOpen }),
     toggleRightPanel: () => set((state) => ({ rightPanelOpen: !state.rightPanelOpen })),
+    setPlacementSettings: (placementSettings) => set((state) => ({
+        placementSettings: { ...state.placementSettings, ...placementSettings }
+    })),
 }));
