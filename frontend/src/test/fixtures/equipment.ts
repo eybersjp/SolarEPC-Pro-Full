@@ -8,8 +8,15 @@ export const mockEquipmentModule: EquipmentModule = {
     efficiency: 21.5,
     length_m: 2.0,
     width_m: 1.0,
+    thickness_m: 0.04,
+    voc: 45.5,
+    isc: 11.2,
+    vmp: 38.4,
+    imp: 10.4,
+    tenant_id: 'tenant-1',
+    is_global: true,
+    is_active: true,
     created_at: '2024-01-01T00:00:00Z',
-    updated_at: '2024-01-01T00:00:00Z'
 };
 
 export const mockEquipmentInverter: EquipmentInverter = {
@@ -18,9 +25,14 @@ export const mockEquipmentInverter: EquipmentInverter = {
     model: 'TE-50K',
     capacity_kw: 50,
     max_dc_voltage: 1000,
+    mppt_voltage_range_min: 200,
+    mppt_voltage_range_max: 800,
+    max_input_current: 50,
     num_mppt_channels: 4,
+    tenant_id: 'tenant-1',
+    is_global: true,
+    is_active: true,
     created_at: '2024-01-01T00:00:00Z',
-    updated_at: '2024-01-01T00:00:00Z'
 };
 
 export const mockModulesList = [

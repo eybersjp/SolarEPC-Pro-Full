@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { siteDesignsApi } from "@/lib/api";
+import { siteDesignsApi, pvDesignsApi } from "@/lib/api";
 import { queryKeys } from "@/lib/queryKeys";
 import { SiteDesignCreate, SiteDesignUpdate, SiteDesignResponse, EnergyEstimateResponse, FinancialAnalysisResponse } from "@/types";
 import { useDesignCanvasStore } from "@/stores/useDesignCanvasStore";
@@ -183,5 +183,13 @@ export function useFinancialAnalysisQuery(designId: string) {
         queryKey: queryKeys.financialAnalysis.detail(designId),
         queryFn: () => siteDesignsApi.getFinancialAnalysis(designId),
         enabled: !!designId,
+    });
+}
+
+export function usePVDesignQuery(tenderId: string, pvDesignId: string | null) {
+    return useQuery({
+        queryKey: queryKeys.pvDesigns.detail(tenderId, pvDesignId || ''),
+        queryFn: () => pvDesignsApi.get(pvDesignId!),
+        enabled: !!tenderId && !!pvDesignId,
     });
 }

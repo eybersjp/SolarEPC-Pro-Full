@@ -374,7 +374,7 @@ export interface EnergyEstimateResponse {
     design_id: string;
     status: EnergyEstimateStatus;
     annual_energy_kwh: number;
-    monthly_energy_kwh: MonthlyEnergyData[]; // Now correctly typed as array
+    monthly_energy_kwh: number[]; // Array of 12 numbers from API
     capacity_factor: number;
     error_message?: string;
     calculated_at: string | null;
