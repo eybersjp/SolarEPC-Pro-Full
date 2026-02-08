@@ -4,6 +4,7 @@ import { FloatingPalette } from "./FloatingPalette";
 import { RightPanel } from "./RightPanel";
 import PlacementLoadingOverlay from "./PlacementLoadingOverlay";
 import { useDesignCanvasStore } from "@/stores/useDesignCanvasStore";
+import { ResultsBottomSheet } from "./ResultsBottomSheet";
 
 interface CanvasLayoutProps {
     children: ReactNode;
@@ -25,6 +26,7 @@ export function CanvasLayout({ children, title, tenderId, designId }: CanvasLayo
                     <FloatingPalette />
                     <PlacementLoadingOverlay />
                     {children}
+                    <ResultsBottomSheet designId={designId} />
                 </div>
 
                 {/* Right Panel */}

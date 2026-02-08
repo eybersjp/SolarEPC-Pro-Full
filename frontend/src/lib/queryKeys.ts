@@ -76,4 +76,20 @@ export const queryKeys = {
         invertersList: (filters?: { search?: string; manufacturer?: string }) =>
             [...queryKeys.equipment.inverters(), filters] as const,
     },
+
+    // Energy Estimation queries
+    energyEstimation: {
+        all: ["energy-estimation"] as const,
+        details: () => [...queryKeys.energyEstimation.all, "detail"] as const,
+        detail: (designId: string) =>
+            [...queryKeys.energyEstimation.details(), designId] as const,
+    },
+
+    // Financial Analysis queries
+    financialAnalysis: {
+        all: ["financial-analysis"] as const,
+        details: () => [...queryKeys.financialAnalysis.all, "detail"] as const,
+        detail: (designId: string) =>
+            [...queryKeys.financialAnalysis.details(), designId] as const,
+    },
 } as const;

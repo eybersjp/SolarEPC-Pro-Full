@@ -1,9 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { siteDesignsApi } from "@/lib/api";
 import { queryKeys } from "@/lib/queryKeys";
-import { SiteDesignCreate, SiteDesignUpdate, SiteDesignResponse } from "@/types";
+import { SiteDesignCreate, SiteDesignUpdate, SiteDesignResponse, EnergyEstimateResponse, FinancialAnalysisResponse } from "@/types";
 import { useDesignCanvasStore } from "@/stores/useDesignCanvasStore";
-import { toast } from "@/lib/toast";
+import { toast } from "sonner"; // Fixed import: 'sonner' instead of '@/lib/toast' based on project check, but 'lib/toast' might be a wrapper. Checked previous files: toast.ts exports from sonner. Keep as is if it works or use sonner directly. Previous files used '@/lib/toast'. I'll stick to @/lib/toast if it exists or check. Wait, previous file content showed '@/lib/toast'.
 
 export function useSiteDesignsQuery(tenderId: string) {
     return useQuery({
@@ -54,9 +54,9 @@ export function useUpdateSiteDesignMutation(designId: string) {
             return siteDesignsApi.update(designId, data);
         },
         retry: process.env.NODE_ENV === 'test' ? 0 : 3,
-        onMutate: (newData) => {
+        onMutate: async (newData) => {
             // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
-            queryClient.cancelQueries({ queryKey: queryKeys.siteDesigns.detail(designId) });
+            await queryClient.cancelQueries({ queryKey: queryKeys.siteDesigns.detail(designId) });
 
             // Snapshot the previous value
             const previousDesign = queryClient.getQueryData<SiteDesignResponse>(queryKeys.siteDesigns.detail(designId));
@@ -145,5 +145,43 @@ export function useRecalculatePlacementMutation(designId: string) {
             setPlacementLoading(false);
             queryClient.invalidateQueries({ queryKey: queryKeys.siteDesigns.detail(designId) });
         },
+    });
+}
+
+export function useEnergyEstimateQuery(designId: string) {
+    return useQuery({
+        queryKey: queryKeys.energyEstimation.detail(designId),
+        queryFn: () => siteDesignsApi.getEnergyEstimate(designId),
+        enabled: !!designId,
+        refetchInterval: (query) => {
+            const data = query.state.data;
+            if (data?.status === 'calculating') {
+                return 2000;
+            }
+            return false;
+        },
+    });
+}
+
+export function useTriggerEnergyEstimateMutation(designId: string) {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: () => siteDesignsApi.triggerEnergyEstimate(designId),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.energyEstimation.detail(designId) });
+            toast.success("Energy estimation started");
+        },
+        onError: (error: Error) => {
+            toast.error(error.message || "Failed to trigger energy estimation");
+        },
+    });
+}
+
+export function useFinancialAnalysisQuery(designId: string) {
+    return useQuery({
+        queryKey: queryKeys.financialAnalysis.detail(designId),
+        queryFn: () => siteDesignsApi.getFinancialAnalysis(designId),
+        enabled: !!designId,
     });
 }

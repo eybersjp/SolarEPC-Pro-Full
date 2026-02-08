@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useDesignCanvasStore } from "@/stores/useDesignCanvasStore";
 import { useEquipmentModulesQuery, useEquipmentInvertersQuery } from "@/hooks/useEquipment";
 import { useSiteDesignQuery, useUpdateSiteDesignMutation } from "@/hooks/useSiteDesigns";
@@ -10,9 +10,10 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { InfoIcon, Loader2 } from "lucide-react";
+import { InfoIcon, Loader2, Search } from "lucide-react";
 
 interface EquipmentSelectorProps {
     designId: string;
@@ -25,6 +26,9 @@ export function EquipmentSelector({ designId }: EquipmentSelectorProps) {
     const updateMutation = useUpdateSiteDesignMutation(designId);
     const setEquipmentSelection = useDesignCanvasStore((state) => state.setEquipmentSelection);
 
+    const [moduleSearch, setModuleSearch] = useState("");
+    const [inverterSearch, setInverterSearch] = useState("");
+
     useEffect(() => {
         setEquipmentSelection(design?.equipment_module_id ?? null, design?.equipment_inverter_id ?? null);
     }, [design?.equipment_module_id, design?.equipment_inverter_id, setEquipmentSelection]);
@@ -36,6 +40,16 @@ export function EquipmentSelector({ designId }: EquipmentSelectorProps) {
     const handleInverterChange = (inverterId: string) => {
         updateMutation.mutate({ equipment_inverter_id: inverterId });
     };
+
+    const filteredModules = modules?.filter(m =>
+        m.manufacturer.toLowerCase().includes(moduleSearch.toLowerCase()) ||
+        m.model.toLowerCase().includes(moduleSearch.toLowerCase())
+    );
+
+    const filteredInverters = inverters?.filter(i =>
+        i.manufacturer.toLowerCase().includes(inverterSearch.toLowerCase()) ||
+        i.model.toLowerCase().includes(inverterSearch.toLowerCase())
+    );
 
     if (isLoadingDesign || isLoadingModules || isLoadingInverters) {
         return (
@@ -74,6 +88,17 @@ export function EquipmentSelector({ designId }: EquipmentSelectorProps) {
                         <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
                     )}
                 </div>
+
+                <div className="relative">
+                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        placeholder="Search modules..."
+                        value={moduleSearch}
+                        onChange={(e) => setModuleSearch(e.target.value)}
+                        className="mb-2 pl-8"
+                    />
+                </div>
+
                 <Select
                     value={design?.equipment_module_id || ""}
                     onValueChange={handleModuleChange}
@@ -83,11 +108,14 @@ export function EquipmentSelector({ designId }: EquipmentSelectorProps) {
                         <SelectValue placeholder="Select a module" />
                     </SelectTrigger>
                     <SelectContent>
-                        {modules?.map((m) => (
+                        {filteredModules?.map((m) => (
                             <SelectItem key={m.id} value={m.id}>
                                 {m.manufacturer} {m.model} ({m.wattage}W)
                             </SelectItem>
                         ))}
+                        {filteredModules?.length === 0 && (
+                            <div className="p-2 text-sm text-muted-foreground text-center">No modules found</div>
+                        )}
                     </SelectContent>
                 </Select>
                 {selectedModule && (
@@ -115,6 +143,17 @@ export function EquipmentSelector({ designId }: EquipmentSelectorProps) {
                         <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
                     )}
                 </div>
+
+                <div className="relative">
+                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        placeholder="Search inverters..."
+                        value={inverterSearch}
+                        onChange={(e) => setInverterSearch(e.target.value)}
+                        className="mb-2 pl-8"
+                    />
+                </div>
+
                 <Select
                     value={design?.equipment_inverter_id || ""}
                     onValueChange={handleInverterChange}
@@ -124,11 +163,14 @@ export function EquipmentSelector({ designId }: EquipmentSelectorProps) {
                         <SelectValue placeholder="Select an inverter" />
                     </SelectTrigger>
                     <SelectContent>
-                        {inverters?.map((i) => (
+                        {filteredInverters?.map((i) => (
                             <SelectItem key={i.id} value={i.id}>
                                 {i.manufacturer} {i.model} ({i.capacity_kw}kW)
                             </SelectItem>
                         ))}
+                        {filteredInverters?.length === 0 && (
+                            <div className="p-2 text-sm text-muted-foreground text-center">No inverters found</div>
+                        )}
                     </SelectContent>
                 </Select>
                 {selectedInverter && (

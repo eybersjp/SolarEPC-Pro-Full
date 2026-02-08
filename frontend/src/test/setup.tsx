@@ -92,3 +92,13 @@ Object.defineProperty(window, 'matchMedia', {
         dispatchEvent: vi.fn(),
     })),
 })
+
+// Mock pointer capture methods for Radix UI
+window.HTMLElement.prototype.hasPointerCapture = vi.fn();
+window.HTMLElement.prototype.setPointerCapture = vi.fn();
+window.HTMLElement.prototype.releasePointerCapture = vi.fn();
+window.Element.prototype.hasPointerCapture = vi.fn();
+window.Element.prototype.setPointerCapture = vi.fn();
+window.Element.prototype.releasePointerCapture = vi.fn();
+window.HTMLElement.prototype.scrollIntoView = vi.fn();
+window.Element.prototype.scrollIntoView = vi.fn();

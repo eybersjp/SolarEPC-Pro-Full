@@ -5,8 +5,8 @@ export const mockSiteDesign: SiteDesignResponse = {
     tender_id: "tender-1",
     name: "Main Test Design",
     site_type: "rooftop" as SiteType,
-    equipment_module_id: "mod-1",
-    equipment_inverter_id: "inv-1",
+    equipment_module_id: "module-1",
+    equipment_inverter_id: "inverter-1",
     pv_design_id: null,
     site_boundary: {
         type: "Polygon",

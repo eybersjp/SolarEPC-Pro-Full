@@ -25,5 +25,12 @@ const renderWithProviders = (
     options?: Omit<RenderOptions, 'wrapper'>
 ) => render(ui, { wrapper: AllTheProviders, ...options })
 
+export const createWrapper = () => {
+    const queryClient = createTestQueryClient()
+    return ({ children }: { children: React.ReactNode }) => (
+        <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    )
+}
+
 export * from '@testing-library/react'
 export { renderWithProviders, createTestQueryClient }

@@ -61,4 +61,58 @@ describe('useDesignCanvasStore', () => {
         useDesignCanvasStore.getState().toggleRightPanel()
         expect(useDesignCanvasStore.getState().rightPanelOpen).toBe(!initial)
     })
+
+    describe('equipment selection', () => {
+        it('should update equipment selection and set hasEquipmentSelected', () => {
+            useDesignCanvasStore.getState().setEquipmentSelection('mod-1', 'inv-1')
+            const state = useDesignCanvasStore.getState()
+
+            expect(state.equipmentModuleId).toBe('mod-1')
+            expect(state.equipmentInverterId).toBe('inv-1')
+            expect(state.hasEquipmentSelected).toBe(true)
+        })
+
+        it('should clear equipment selection', () => {
+            // Setup initial state
+            useDesignCanvasStore.getState().setEquipmentSelection('mod-1', 'inv-1')
+            expect(useDesignCanvasStore.getState().hasEquipmentSelected).toBe(true)
+
+            // Clear
+            useDesignCanvasStore.getState().clearEquipmentSelection()
+            const state = useDesignCanvasStore.getState()
+
+            expect(state.equipmentModuleId).toBeNull()
+            expect(state.equipmentInverterId).toBeNull()
+            expect(state.hasEquipmentSelected).toBe(false)
+        })
+
+        it('should reset mode from draw to select when equipment is cleared', () => {
+            // Setup: selected equipment and draw mode
+            useDesignCanvasStore.getState().setEquipmentSelection('mod-1', 'inv-1')
+            useDesignCanvasStore.getState().setMode('draw')
+            useDesignCanvasStore.getState().setSelectedTool('roof')
+
+            expect(useDesignCanvasStore.getState().mode).toBe('draw')
+
+            // Clear equipment
+            useDesignCanvasStore.getState().clearEquipmentSelection()
+            const state = useDesignCanvasStore.getState()
+
+            expect(state.hasEquipmentSelected).toBe(false)
+            expect(state.mode).toBe('select')
+            expect(state.selectedTool).toBeNull()
+        })
+
+        it('should NOT reset mode when equipment is cleared if not in draw mode', () => {
+            // Setup: selected equipment and select mode
+            useDesignCanvasStore.getState().setEquipmentSelection('mod-1', 'inv-1')
+            useDesignCanvasStore.getState().setMode('select')
+
+            // Clear equipment
+            useDesignCanvasStore.getState().clearEquipmentSelection()
+            const state = useDesignCanvasStore.getState()
+
+            expect(state.mode).toBe('select')
+        })
+    })
 })

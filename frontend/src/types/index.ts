@@ -359,3 +359,35 @@ export interface EquipmentInverter {
     is_active: boolean;
     created_at: string;
 }
+
+// Energy and Financial Types
+
+export type EnergyEstimateStatus = 'not_calculated' | 'calculating' | 'completed' | 'failed';
+
+export interface MonthlyEnergyData {
+    month: string;
+    energy_kwh: number;
+}
+
+export interface EnergyEstimateResponse {
+    id: string;
+    design_id: string;
+    status: EnergyEstimateStatus;
+    annual_energy_kwh: number;
+    monthly_energy_kwh: MonthlyEnergyData[]; // Now correctly typed as array
+    capacity_factor: number;
+    error_message?: string;
+    calculated_at: string | null;
+}
+
+export interface FinancialAnalysisResponse {
+    id: string;
+    design_id: string;
+    system_cost_usd: number;
+    electricity_rate_usd_per_kwh: number;
+    annual_rate_escalation_pct: number;
+    annual_savings_usd: number;
+    simple_payback_years: number;
+    roi_pct: number;
+    calculated_at: string;
+}

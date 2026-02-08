@@ -29,6 +29,8 @@ import type {
     SiteDesignUpdate,
     EquipmentModule,
     EquipmentInverter,
+    EnergyEstimateResponse,
+    FinancialAnalysisResponse,
 } from "@/types";
 
 export class ApiError extends Error {
@@ -287,6 +289,17 @@ export const siteDesignsApi = {
         fetchApi<SiteDesignResponse>(`/site-designs/${designId}/recalculate`, {
             method: "POST",
         }),
+
+    getEnergyEstimate: (designId: string) =>
+        fetchApi<EnergyEstimateResponse>(`/site-designs/${designId}/energy-estimate`),
+
+    triggerEnergyEstimate: (designId: string) =>
+        fetchApi<EnergyEstimateResponse>(`/site-designs/${designId}/energy-estimate`, {
+            method: "POST",
+        }),
+
+    getFinancialAnalysis: (designId: string) =>
+        fetchApi<FinancialAnalysisResponse>(`/site-designs/${designId}/financial-analysis`),
 };
 
 // Equipment API

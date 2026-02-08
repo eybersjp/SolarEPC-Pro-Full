@@ -78,6 +78,7 @@ export function PlacementSettings({ designId }: PlacementSettingsProps) {
                     />
                     <Input
                         type="number"
+                        aria-label="Azimuth Input"
                         value={settings.azimuth_deg ?? 180}
                         onChange={(e) => handleSettingChange('azimuth_deg', parseFloat(e.target.value))}
                         className="w-20"
@@ -91,14 +92,24 @@ export function PlacementSettings({ designId }: PlacementSettingsProps) {
                     <Label htmlFor="row_spacing">Row Spacing (m)</Label>
                     <span className="text-sm text-muted-foreground">{settings.row_spacing_m ?? 2.5}m</span>
                 </div>
-                <Slider
-                    id="row_spacing"
-                    min={0.5}
-                    max={10}
-                    step={0.1}
-                    value={[settings.row_spacing_m ?? 2.5]}
-                    onValueChange={(val) => handleSettingChange('row_spacing_m', val[0])}
-                />
+                <div className="flex gap-4 items-center">
+                    <Slider
+                        id="row_spacing"
+                        min={0.5}
+                        max={10}
+                        step={0.1}
+                        value={[settings.row_spacing_m ?? 2.5]}
+                        onValueChange={(val) => handleSettingChange('row_spacing_m', val[0])}
+                    />
+                    <Input
+                        type="number"
+                        aria-label="Row Spacing Input"
+                        value={settings.row_spacing_m ?? 2.5}
+                        onChange={(e) => handleSettingChange('row_spacing_m', parseFloat(e.target.value))}
+                        className="w-20"
+                        step="0.1"
+                    />
+                </div>
             </div>
 
             {/* Tilt */}
@@ -107,14 +118,23 @@ export function PlacementSettings({ designId }: PlacementSettingsProps) {
                     <Label htmlFor="tilt">Tilt (°)</Label>
                     <span className="text-sm text-muted-foreground">{settings.tilt_deg ?? 20}°</span>
                 </div>
-                <Slider
-                    id="tilt"
-                    min={0}
-                    max={90}
-                    step={1}
-                    value={[settings.tilt_deg ?? 20]}
-                    onValueChange={(val) => handleSettingChange('tilt_deg', val[0])}
-                />
+                <div className="flex gap-4 items-center">
+                    <Slider
+                        id="tilt"
+                        min={0}
+                        max={90}
+                        step={1}
+                        value={[settings.tilt_deg ?? 20]}
+                        onValueChange={(val) => handleSettingChange('tilt_deg', val[0])}
+                    />
+                    <Input
+                        type="number"
+                        aria-label="Tilt Input"
+                        value={settings.tilt_deg ?? 20}
+                        onChange={(e) => handleSettingChange('tilt_deg', parseFloat(e.target.value))}
+                        className="w-20"
+                    />
+                </div>
             </div>
 
             {/* Orientation */}

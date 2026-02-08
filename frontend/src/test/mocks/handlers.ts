@@ -1,5 +1,6 @@
 import { http, HttpResponse } from 'msw'
 import { mockSiteDesign } from '../fixtures/siteDesign'
+import { mockModulesList, mockInvertersList } from '../fixtures/equipment'
 
 export const handlers = [
     // GET /api/site-designs/:id
@@ -43,5 +44,31 @@ export const handlers = [
     // GET /api/tenders/:id/site-designs
     http.get('*/api/tenders/:id/site-designs', () => {
         return HttpResponse.json([mockSiteDesign])
+    }),
+
+    // GET /api/equipment/modules
+    http.get('*/api/equipment/modules', ({ request }) => {
+        const url = new URL(request.url)
+        const manufacturer = url.searchParams.get('manufacturer')
+
+        if (manufacturer) {
+            return HttpResponse.json(
+                mockModulesList.filter(m => m.manufacturer.includes(manufacturer))
+            )
+        }
+        return HttpResponse.json(mockModulesList)
+    }),
+
+    // GET /api/equipment/inverters
+    http.get('*/api/equipment/inverters', ({ request }) => {
+        const url = new URL(request.url)
+        const manufacturer = url.searchParams.get('manufacturer')
+
+        if (manufacturer) {
+            return HttpResponse.json(
+                mockInvertersList.filter(i => i.manufacturer.includes(manufacturer))
+            )
+        }
+        return HttpResponse.json(mockInvertersList)
     }),
 ]
