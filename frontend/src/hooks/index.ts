@@ -3,3 +3,4 @@ export * from "./useDesignCanvas";
 export * from "./useBOQ";
 export * from "./useSiteDesigns";
 export * from "./useEquipment";
+export * from "./useProposal";
