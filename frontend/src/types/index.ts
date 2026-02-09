@@ -391,3 +391,25 @@ export interface FinancialAnalysisResponse {
     roi_pct: number;
     calculated_at: string;
 }
+
+// Proposals Types
+export interface ProposalGenerateRequest {
+    include_cover?: boolean;
+    include_site_map?: boolean;
+    include_specs?: boolean;
+    include_energy?: boolean;
+    include_financials?: boolean;
+    include_equipment?: boolean;
+}
+
+export interface ProposalTaskResponse {
+    task_id: string;
+    status: string;
+}
+
+export interface ProposalStatusResponse {
+    task_id: string;
+    status: string;
+    result_url?: string;
+    error?: string;
+}

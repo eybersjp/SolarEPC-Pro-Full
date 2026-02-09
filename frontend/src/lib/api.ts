@@ -31,6 +31,9 @@ import type {
     EquipmentInverter,
     EnergyEstimateResponse,
     FinancialAnalysisResponse,
+    ProposalGenerateRequest,
+    ProposalTaskResponse,
+    ProposalStatusResponse,
 } from "@/types";
 
 export class ApiError extends Error {
@@ -318,5 +321,47 @@ export const equipmentApi = {
         if (filters?.manufacturer) params.set("manufacturer", filters.manufacturer);
         const query = params.toString();
         return fetchApi<EquipmentInverter[]>(`/equipment/inverters${query ? `?${query}` : ""}`);
+    },
+};
+
+// Proposals API
+export const proposalsApi = {
+    generateProposal: (designId: string, options?: ProposalGenerateRequest) =>
+        fetchApi<ProposalTaskResponse>(`/site-designs/${designId}/proposal`, {
+            method: "POST",
+            body: options,
+        }),
+
+    getTaskStatus: (taskId: string) =>
+        fetchApi<ProposalStatusResponse>(`/tasks/${taskId}`),
+
+    exportCSV: async (designId: string) => {
+        const auth = getAuth();
+        const token = await auth.currentUser?.getIdToken();
+        const headers: Record<string, string> = {};
+        if (token) {
+            headers["Authorization"] = `Bearer ${token}`;
+        }
+
+        const response = await fetch(`${API_URL}/site-designs/${designId}/export-csv`, {
+            headers,
+        });
+
+        if (!response.ok) {
+            let errorData: any;
+            try {
+                errorData = await response.json();
+            } catch {
+                errorData = null;
+            }
+            const errorMessage =
+                errorData?.detail ||
+                errorData?.message ||
+                response.statusText ||
+                "Export failed";
+            throw new ApiError(errorMessage, response.status, errorData);
+        }
+
+        return response.blob();
     },
 };

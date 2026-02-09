@@ -92,4 +92,11 @@ export const queryKeys = {
         detail: (designId: string) =>
             [...queryKeys.financialAnalysis.details(), designId] as const,
     },
+
+    // Proposal queries
+    proposals: {
+        all: ["proposals"] as const,
+        tasks: () => [...queryKeys.proposals.all, "task"] as const,
+        task: (taskId: string) => [...queryKeys.proposals.tasks(), taskId] as const,
+    },
 } as const;
