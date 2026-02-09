@@ -55,33 +55,34 @@ export function useUpdateSiteDesignMutation(designId: string) {
     const queryClient = useQueryClient();
     const setSyncState = useDesignCanvasStore((state) => state.setSyncState);
     const setRetryCount = useDesignCanvasStore((state) => state.setRetryCount);
+    const setLastMutationData = useDesignCanvasStore((state) => state.setLastMutationData);
 
     return useMutation({
         mutationFn: (data: SiteDesignUpdate) => {
             setSyncState('syncing');
-            // Reset is handled in onMutate below
+            setLastMutationData(data);
             return siteDesignsApi.update(designId, data);
         },
-        retry: process.env.NODE_ENV === 'test' ? 0 : 3,
+        retry: 3,
         retryDelay: (attemptIndex) => {
             const delays = [1000, 2000, 4000];
             setRetryCount(attemptIndex + 1);
+            toast.error("Failed to save changes. Retrying...");
             return delays[attemptIndex] || 4000;
         },
         onMutate: async (newData) => {
             setRetryCount(0);
-            // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
+            // Cancel any outgoing refetches
             await queryClient.cancelQueries({ queryKey: queryKeys.siteDesigns.detail(designId) });
 
             // Snapshot the previous value
             const previousDesign = queryClient.getQueryData<SiteDesignResponse>(queryKeys.siteDesigns.detail(designId));
 
-            // Optimistically update to the new value
+            // Optimistically update
             if (previousDesign) {
                 queryClient.setQueryData<SiteDesignResponse>(queryKeys.siteDesigns.detail(designId), {
                     ...previousDesign,
                     ...newData,
-                    // If placement_settings is being updated, we need to merge it carefully
                     placement_settings: newData.placement_settings
                         ? { ...previousDesign.placement_settings, ...newData.placement_settings }
                         : previousDesign.placement_settings
@@ -92,21 +93,24 @@ export function useUpdateSiteDesignMutation(designId: string) {
         },
         onSuccess: (data) => {
             setSyncState('synced');
+            setLastMutationData(null);
             queryClient.setQueryData(queryKeys.siteDesigns.detail(designId), data);
-            // Also invalidate lists to ensure everything stays in sync
             queryClient.invalidateQueries({ queryKey: queryKeys.siteDesigns.lists() });
             toast.success("Design saved");
         },
         onError: (err: any, newData, context) => {
+            const retryCount = useDesignCanvasStore.getState().retryCount;
             setSyncState('failed');
-            // If the mutation fails, use the context returned from onMutate to roll back
+
+            if (retryCount >= 3) {
+                toast.error("Failed to save changes after 3 attempts. Click retry to try again.");
+            }
+
             if (context?.previousDesign) {
                 queryClient.setQueryData(queryKeys.siteDesigns.detail(designId), context.previousDesign);
             }
-            toast.error(err?.message || "Failed to save design");
         },
         onSettled: () => {
-            // Always refetch after error or success to ensure we have the server state
             queryClient.invalidateQueries({ queryKey: queryKeys.siteDesigns.detail(designId) });
         },
     });

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { PlacementSettings } from '@/types';
+import { PlacementSettings, SiteDesignUpdate } from '@/types';
 
 interface DesignCanvasState {
     mode: 'select' | 'draw' | 'edit';
@@ -14,6 +14,7 @@ interface DesignCanvasState {
     equipmentInverterId: string | null;
     retryCount: number;
     lastSyncedAt: Date | null;
+    lastMutationData: Partial<SiteDesignUpdate> | null;
 
     // Actions
     setMode: (mode: 'select' | 'draw' | 'edit') => void;
@@ -29,6 +30,7 @@ interface DesignCanvasState {
     setRetryCount: (count: number) => void;
     setLastSyncedAt: (timestamp: Date) => void;
     resetRetryCount: () => void;
+    setLastMutationData: (data: Partial<SiteDesignUpdate> | null) => void;
 }
 
 export const useDesignCanvasStore = create<DesignCanvasState>((set) => ({
@@ -44,6 +46,7 @@ export const useDesignCanvasStore = create<DesignCanvasState>((set) => ({
     equipmentInverterId: null,
     retryCount: 0,
     lastSyncedAt: null,
+    lastMutationData: null,
 
     setMode: (mode) => set({
         mode,
@@ -92,4 +95,5 @@ export const useDesignCanvasStore = create<DesignCanvasState>((set) => ({
     setRetryCount: (retryCount) => set({ retryCount }),
     setLastSyncedAt: (lastSyncedAt) => set({ lastSyncedAt }),
     resetRetryCount: () => set({ retryCount: 0 }),
+    setLastMutationData: (lastMutationData) => set({ lastMutationData }),
 }));
