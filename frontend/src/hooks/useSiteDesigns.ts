@@ -152,7 +152,7 @@ export function useEnergyEstimateQuery(designId: string, options: any = {}) {
     return useQuery<EnergyEstimateResponse>({
         queryKey: queryKeys.energyEstimation.detail(designId),
         queryFn: () => siteDesignsApi.getEnergyEstimate(designId),
-        enabled: !!designId && !options.enabled === false,
+        enabled: !!designId && options.enabled !== false,
         refetchInterval: (query: any) => {
             const data = query.state.data;
             if (data?.status === 'calculating') {

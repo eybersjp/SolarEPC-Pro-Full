@@ -31,7 +31,8 @@ import {
     RefreshCw,
     MapPin,
     AlertTriangle,
-    Clock
+    Clock,
+    LucideIcon
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -55,6 +56,8 @@ import { toast } from "sonner";
 
 interface ResultsBottomSheetProps {
     designId: string;
+    pollingInterval?: number;
+    pollingTimeout?: number;
 }
 
 // Optimization: Formatting helpers outside component
@@ -74,85 +77,115 @@ const formatNumber = (value: number, decimals: number = 2) =>
     value.toFixed(decimals);
 
 // Optimization: Memoized components
-const MetricItem = memo(({
+const MetricItem = ({
     icon: Icon,
-    colorClass,
     bgClass,
+    colorClass,
     label,
     value,
     isLoading,
     specialState
-}: any) => (
-    <div className="flex items-center gap-3">
+}: {
+    icon: LucideIcon;
+    bgClass: string;
+    colorClass: string;
+    label: string;
+    value: string | number;
+    isLoading?: boolean;
+    specialState?: React.ReactNode;
+}) => (
+    <div className="flex items-center gap-3" data-testid={`metric-${label.toLowerCase().replace(/\s+/g, '-')}`}>
         <div className={cn("p-2 rounded-full", bgClass, colorClass)}>
             <Icon className="h-4 w-4" />
         </div>
         <div className="flex flex-col">
             <span className="text-xs text-slate-500 font-medium uppercase tracking-wider">{label}</span>
-            {isLoading ? (
-                <Skeleton className="h-6 w-16" />
-            ) : specialState ? (
-                specialState
-            ) : (
-                <span className="text-lg font-bold text-slate-900">{value}</span>
-            )}
+            <div className="flex items-baseline gap-1" data-testid={`metric-value-${label.toLowerCase().replace(/\s/g, '-')}`}>
+                <span className="text-lg font-bold text-slate-900 leading-tight">
+                    {isLoading ? <Skeleton className="h-6 w-16" /> : value}
+                </span>
+                {specialState}
+            </div>
         </div>
     </div>
-));
+);
 MetricItem.displayName = "MetricItem";
 
-const MetricCard = memo(({ title, value, icon: Icon, isLoading, suffix }: any) => (
-    <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
-            <Icon className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-            {isLoading ? (
-                <Skeleton className="h-7 w-20" />
-            ) : (
-                <div className="text-2xl font-bold">
-                    {value}{suffix && <span className="text-sm font-normal text-muted-foreground ml-1">{suffix}</span>}
-                </div>
-            )}
-        </CardContent>
+const MetricCard = ({ title, value, icon: Icon, isLoading, suffix, description, specialState }: { title: string; value: string | number; icon: LucideIcon; isLoading?: boolean; suffix?: string; description?: string; specialState?: React.ReactNode }) => (
+    <Card className="p-4 shadow-sm hover:shadow-md transition-shadow">
+        <div className="flex items-center justify-between mb-2">
+            <h4 className="text-sm font-medium text-slate-500">{title}</h4>
+            <div className="p-1.5 bg-slate-100 rounded-lg">
+                <Icon className="h-4 w-4 text-slate-600" />
+            </div>
+        </div>
+        <div className="flex flex-col gap-1">
+            <div className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+                {isLoading ? <Skeleton className="h-8 w-20" /> : (
+                    <>
+                        {value}
+                        {suffix && <span className="text-sm font-normal text-slate-500 ml-1">{suffix}</span>}
+                    </>
+                )}
+                {specialState}
+            </div>
+            {description && <p className="text-xs text-slate-400 mt-1">{description}</p>}
+        </div>
     </Card>
-));
+);
 MetricCard.displayName = "MetricCard";
 
-export function ResultsBottomSheet({ designId }: ResultsBottomSheetProps) {
+export function ResultsBottomSheet({
+    designId,
+    pollingInterval = 2000,
+    pollingTimeout = 5 * 60 * 1000
+}: ResultsBottomSheetProps) {
     const [isExpanded, setIsExpanded] = useState(false);
     const rightPanelOpen = useDesignCanvasStore((state) => state.rightPanelOpen);
     const [isSmallScreen, setIsSmallScreen] = useState(false);
     const [calcStartTime, setCalcStartTime] = useState<number | null>(null);
     const [pollingTimedOut, setPollingTimedOut] = useState(false);
-
-    // Status tracking for toasts
     const prevStatusRef = useRef<string | null>(null);
 
     // Fetch Data
     const { data: design, isLoading: isDesignLoading } = useSiteDesignQuery(designId);
 
+    // Derived values needed for hook dependencies
     const isZeroCapacity = design ? design.system_size_kwp === 0 : false;
     const shouldPollEnergy = !pollingTimedOut && !isZeroCapacity;
 
     const {
         data: energyData,
         isLoading: isEnergyLoading,
+        isError: isEnergyError,
         isFetching: isEnergyFetching,
         refetch: refetchEnergy
     } = useEnergyEstimateQuery(designId, {
-        refetchInterval: (data: any) => (data?.status === 'calculating' && shouldPollEnergy) ? 2000 : false
+        refetchInterval: (query: any) => {
+            const data = query.state.data;
+            const status = data?.status;
+            const res = (status === 'calculating' && shouldPollEnergy) ? pollingInterval : false;
+            console.log(`[ResultsBottomSheet] refetchInterval calc: status=${status}, shouldPoll=${shouldPollEnergy}, interval=${pollingInterval} -> result=${res}`);
+            return res;
+        }
     });
 
     const { data: financialData, isLoading: isFinancialLoading } = useFinancialAnalysisQuery(designId);
     const { data: pvDesign, isLoading: isPVDesignLoading } = usePVDesignQuery(design?.tender_id || '', design?.pv_design_id || null);
     const { mutate: retryEnergyEstimate, isPending: isRetryingEnergy } = useTriggerEnergyEstimateMutation(designId);
 
-    const isEnergyCalculating = energyData?.status === 'calculating';
-    const isEnergyFailed = energyData?.status === 'failed';
-    const isEnergyUnavailable = !energyData && !isEnergyLoading;
+    const isEnergyCalculating = (energyData?.status as string === 'calculating') || isRetryingEnergy;
+    const isEnergyFailed = (energyData?.status as string === 'failed') && !isRetryingEnergy;
+    const isEnergyUnavailable = !energyData && !isEnergyLoading && !isRetryingEnergy;
     const hasModules = design && design.total_modules > 0;
+
+    console.log(`[ResultsBottomSheet] Render: id=${designId}, isCalc=${isEnergyCalculating}, isFailed=${isEnergyFailed}, isLoading=${isEnergyLoading}, dataStatus=${energyData?.status}, expanded=${isExpanded}`);
+
+    const resetPolling = useCallback(() => {
+        setPollingTimedOut(false);
+        setCalcStartTime(null); // Will be reset on next calculating status
+        refetchEnergy();
+    }, [refetchEnergy]);
 
     // Toast Notifications for state transitions
     useEffect(() => {
@@ -178,17 +211,17 @@ export function ResultsBottomSheet({ designId }: ResultsBottomSheetProps) {
         prevStatusRef.current = currentStatus;
     }, [energyData?.status, energyData?.error_message, designId]);
 
-    // Polling timeout safeguard (5 minutes)
+    // Polling timeout safeguard (configurable)
     useEffect(() => {
         if (!isEnergyCalculating || !calcStartTime) return;
 
         const timeoutId = setTimeout(() => {
             setPollingTimedOut(true);
             toast.warning("Calculation is taking longer than expected. Please check back later.");
-        }, 5 * 60 * 1000);
+        }, pollingTimeout);
 
         return () => clearTimeout(timeoutId);
-    }, [isEnergyCalculating, calcStartTime]);
+    }, [isEnergyCalculating, calcStartTime, pollingTimeout]);
 
     // Responsive Resize Handler
     useEffect(() => {
@@ -227,68 +260,7 @@ export function ResultsBottomSheet({ designId }: ResultsBottomSheetProps) {
         return "Check design parameters or contact support for assistance.";
     }, []);
 
-    const EnergySpecialState = useMemo(() => {
-        if (isEnergyCalculating) {
-            return (
-                <div className="flex items-center gap-2 text-amber-600 font-semibold animate-pulse">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    <span>{pollingTimedOut ? "Taking a while..." : "Calculating..."}</span>
-                </div>
-            );
-        }
-        if (isEnergyFailed) {
-            return (
-                <TooltipProvider>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <div className="flex items-center gap-2 text-red-500 font-semibold cursor-help">
-                                <AlertCircle className="h-4 w-4" />
-                                <span>Failed</span>
-                            </div>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                            <p>{energyData?.error_message || "Estimation failed"}</p>
-                        </TooltipContent>
-                    </Tooltip>
-                </TooltipProvider>
-            );
-        }
-        if (isStaleEnergy) {
-            return (
-                <TooltipProvider>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <div className="flex items-center gap-2 text-amber-500 font-semibold cursor-help">
-                                <Clock className="h-4 w-4" />
-                                <span>Outdated</span>
-                            </div>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                            <p>Design has changed since last calculation. Values may be inaccurate.</p>
-                        </TooltipContent>
-                    </Tooltip>
-                </TooltipProvider>
-            );
-        }
-        return null;
-    }, [isEnergyCalculating, isEnergyFailed, isStaleEnergy, energyData?.error_message, pollingTimedOut]);
-
-    // Conditional Rendering Early Returns
-    if (!designId) return null;
-
-    // Show initial loading bar
-    if (isDesignLoading && !design) {
-        return (
-            <div className={cn("fixed bottom-0 left-0 right-0 z-30 transition-all duration-300", rightPanelOpen ? "md:mr-[320px]" : "mr-0")}>
-                <div className="bg-white/95 backdrop-blur-md border-t px-6 py-4">
-                    <Skeleton className="h-10 w-full" />
-                </div>
-            </div>
-        );
-    }
-
-    // Derived Formats
-    const formattedSystemSize = `${design?.system_size_kwp.toFixed(2) || "0.00"} kWp`;
+    // GUIDANCE: Common guidance for errors
 
     const formattedEnergyValue = useMemo(() => {
         if (isZeroCapacity) return "N/A";
@@ -297,6 +269,8 @@ export function ResultsBottomSheet({ designId }: ResultsBottomSheetProps) {
         return formatEnergy(energyData.annual_energy_kwh / 1000);
     }, [isZeroCapacity, isEnergyUnavailable, energyData?.annual_energy_kwh]);
 
+    // Derived Formats
+    const formattedSystemSize = `${design?.system_size_kwp.toFixed(2) || "0.00"} kWp`;
     const formattedPayback = financialData ? `${financialData.simple_payback_years.toFixed(1)} years` : "—";
 
     // Summary Bar Content
@@ -341,7 +315,41 @@ export function ResultsBottomSheet({ designId }: ResultsBottomSheetProps) {
                 label="Annual Energy"
                 value={formattedEnergyValue}
                 isLoading={isEnergyLoading && !energyData}
-                specialState={EnergySpecialState}
+                specialState={
+                    isEnergyCalculating ? (
+                        <div data-testid="energy-calculating" className="flex items-center gap-1 text-amber-600 animate-pulse">
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                        </div>
+                    ) : (isEnergyFailed ? (
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <div data-testid="energy-failed" className="flex items-center gap-1 text-red-500 scale-90 cursor-help">
+                                        <AlertCircle className="h-3 w-3" />
+                                        <span className="text-[10px] font-bold">FAILED</span>
+                                    </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>{energyData?.error_message || "Estimation failed"}</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
+                    ) : (isStaleEnergy ? (
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <div data-testid="energy-stale" className="flex items-center gap-1 text-amber-500 scale-90 cursor-help">
+                                        <Clock className="h-3 w-3" />
+                                        <span className="text-[10px] font-bold">STALE</span>
+                                    </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>Design has changed since last calculation. Values may be inaccurate.</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
+                    ) : null))
+                }
             />
             <MetricItem
                 icon={TrendingUp}
@@ -355,6 +363,18 @@ export function ResultsBottomSheet({ designId }: ResultsBottomSheetProps) {
     );
 
     const buttonLabel = isEnergyCalculating ? (pollingTimedOut ? "Polling Paused" : "View Status") : (isEnergyFailed ? "View Error" : "View Details");
+
+    if (!designId) return null;
+
+    if (isDesignLoading && !design) {
+        return (
+            <div className={cn("fixed bottom-0 left-0 right-0 z-30 transition-all duration-300", rightPanelOpen ? "md:mr-[320px]" : "mr-0")}>
+                <div className="bg-white/95 backdrop-blur-md border-t px-6 py-4">
+                    <Skeleton className="h-10 w-full" />
+                </div>
+            </div>
+        );
+    }
 
     return (
         <>
@@ -389,7 +409,14 @@ export function ResultsBottomSheet({ designId }: ResultsBottomSheetProps) {
                         </div>
 
                         {/* Scrollable Tabs Content */}
-                        <div className="flex-1 overflow-y-auto bg-slate-50/50 p-6 animate-in fade-in duration-500">
+                        <div
+                            className="flex-1 overflow-y-auto bg-slate-50/50 p-6 animate-in fade-in duration-500"
+                            data-testid="results-content-container"
+                            data-is-stale={isStaleEnergy}
+                            data-is-unavailable={isEnergyUnavailable}
+                            data-is-loading={isEnergyLoading}
+                            data-is-error={isEnergyError}
+                        >
                             {!hasModules ? (
                                 <div className="h-full flex flex-col items-center justify-center text-slate-500 gap-6 py-20">
                                     <div className="p-4 bg-amber-50 rounded-full text-amber-600">
@@ -429,6 +456,47 @@ export function ResultsBottomSheet({ designId }: ResultsBottomSheetProps) {
                                                 isLoading={isDesignLoading}
                                             />
                                             <MetricCard
+                                                title="Annual Energy"
+                                                value={formattedEnergyValue}
+                                                icon={Sun}
+                                                isLoading={isEnergyLoading && !energyData}
+                                                specialState={
+                                                    isEnergyCalculating ? (
+                                                        <div data-testid="energy-calculating" className="flex items-center gap-1 text-amber-600 animate-pulse">
+                                                            <Loader2 className="h-3 w-3 animate-spin" />
+                                                        </div>
+                                                    ) : (isEnergyFailed ? (
+                                                        <TooltipProvider>
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <div data-testid="energy-failed" className="flex items-center gap-1 text-red-500 scale-90 cursor-help">
+                                                                        <AlertCircle className="h-3 w-3" />
+                                                                        <span className="text-[10px] font-bold">FAILED</span>
+                                                                    </div>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>
+                                                                    <p>{energyData?.error_message || "Estimation failed"}</p>
+                                                                </TooltipContent>
+                                                            </Tooltip>
+                                                        </TooltipProvider>
+                                                    ) : (isStaleEnergy ? (
+                                                        <TooltipProvider>
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <div data-testid="energy-stale" className="flex items-center gap-1 text-amber-500 scale-90 cursor-help">
+                                                                        <Clock className="h-3 w-3" />
+                                                                        <span className="text-[10px] font-bold">STALE</span>
+                                                                    </div>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>
+                                                                    <p>Design has changed since last calculation. Values may be inaccurate.</p>
+                                                                </TooltipContent>
+                                                            </Tooltip>
+                                                        </TooltipProvider>
+                                                    ) : null))
+                                                }
+                                            />
+                                            <MetricCard
                                                 title="DC:AC Ratio"
                                                 value={pvDesign ? formatNumber(pvDesign.dc_ac_ratio, 2) : "—"}
                                                 icon={Activity}
@@ -460,6 +528,42 @@ export function ResultsBottomSheet({ designId }: ResultsBottomSheetProps) {
                                                 value={formattedEnergyValue}
                                                 icon={Sun}
                                                 isLoading={isEnergyLoading && !energyData}
+                                                specialState={
+                                                    isEnergyCalculating ? (
+                                                        <div data-testid="energy-calculating" className="flex items-center gap-2 text-amber-600 font-semibold animate-pulse">
+                                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                                            <span className="text-sm">{pollingTimedOut ? "Taking a while..." : "Calculating..."}</span>
+                                                        </div>
+                                                    ) : (isEnergyFailed ? (
+                                                        <TooltipProvider>
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <div data-testid="energy-failed" className="flex items-center gap-2 text-red-500 font-semibold cursor-help">
+                                                                        <AlertCircle className="h-4 w-4" />
+                                                                        <span>Estimation Failed</span>
+                                                                    </div>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>
+                                                                    <p>{energyData?.error_message || "Estimation failed"}</p>
+                                                                </TooltipContent>
+                                                            </Tooltip>
+                                                        </TooltipProvider>
+                                                    ) : (isStaleEnergy ? (
+                                                        <TooltipProvider>
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <div data-testid="energy-stale" className="flex items-center gap-2 text-amber-500 font-semibold cursor-help">
+                                                                        <Clock className="h-4 w-4" />
+                                                                        <span>Outdated</span>
+                                                                    </div>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>
+                                                                    <p>Design has changed since last calculation. Values may be inaccurate.</p>
+                                                                </TooltipContent>
+                                                            </Tooltip>
+                                                        </TooltipProvider>
+                                                    ) : null))
+                                                }
                                             />
                                             <MetricCard
                                                 title="Capacity Factor"
@@ -691,7 +795,7 @@ export function ResultsBottomSheet({ designId }: ResultsBottomSheetProps) {
                         isEnergyFailed && "bg-red-50/90"
                     )}>
                         <div className="flex flex-col md:flex-row items-center justify-between gap-4 max-w-screen-2xl mx-auto">
-                            <div className="flex-1 w-full" aria-live="polite" aria-busy={isEnergyCalculating}>
+                            <div className="flex-1 w-full" aria-live="polite" aria-busy={isEnergyCalculating} data-testid="status-container">
                                 {!hasModules ? (
                                     <div className="flex items-center gap-3 text-slate-500">
                                         <div className="p-2 bg-slate-100 rounded-full">
@@ -702,11 +806,22 @@ export function ResultsBottomSheet({ designId }: ResultsBottomSheetProps) {
                                 ) : summaryContent}
                             </div>
 
+                            {pollingTimedOut && isEnergyCalculating && (
+                                <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    onClick={(e) => { e.stopPropagation(); resetPolling(); }}
+                                    className="h-9 px-4 bg-amber-500 hover:bg-amber-600 text-white font-bold transition-all whitespace-nowrap"
+                                >
+                                    Check Status
+                                </Button>
+                            )}
                             <Button
                                 variant={isEnergyFailed ? "destructive" : (isEnergyCalculating ? "secondary" : "outline")}
                                 size="sm"
                                 onClick={() => setIsExpanded(true)}
                                 disabled={!hasModules && !isDesignLoading}
+                                data-testid="expand-button"
                                 className={cn(
                                     "whitespace-nowrap w-full md:w-auto mt-2 md:mt-0 font-bold transition-all",
                                     !hasModules && "opacity-50 cursor-not-allowed"

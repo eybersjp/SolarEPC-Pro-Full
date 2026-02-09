@@ -29,8 +29,8 @@ export const mockSiteDesign: SiteDesignResponse = {
         tilt_deg: 10,
     },
     module_placements: [],
-    total_modules: 0,
-    system_size_kwp: 0,
+    total_modules: 80,
+    system_size_kwp: 44.0,
     site_area_sqm: 100,
     placement_task_id: null,
     placement_task_status: null,
@@ -69,4 +69,42 @@ export const mockFinancialAnalysis: any = {
     simple_payback_years: 6.7,
     roi_pct: 15.4,
     calculated_at: new Date().toISOString(),
+};
+
+export const mockEnergyEstimateCalculating: any = {
+    ...mockEnergyEstimate,
+    status: "calculating",
+    annual_energy_kwh: null,
+    monthly_energy_kwh: [],
+};
+
+export const mockEnergyEstimateFailed: any = {
+    ...mockEnergyEstimate,
+    status: "failed",
+    error_message: "PVWatts service error: rate limit exceeded",
+    annual_energy_kwh: null,
+    monthly_energy_kwh: [],
+};
+
+export const mockEnergyEstimateStale: any = {
+    ...mockEnergyEstimate,
+    calculated_at: new Date(Date.now() - 1000 * 60 * 60).toISOString(), // 1 hour ago
+};
+
+export const mockEnergyEstimateIncomplete: any = {
+    ...mockEnergyEstimate,
+    monthly_energy_kwh: [120000, 110000, 130000, 140000, 150000, 160000],
+};
+
+export const mockSiteDesignZeroCapacity: SiteDesignResponse = {
+    ...mockSiteDesign,
+    id: "design-zero",
+    system_size_kwp: 0,
+    total_modules: 0,
+};
+
+export const mockSiteDesignNoLocation: SiteDesignResponse = {
+    ...mockSiteDesign,
+    id: "design-no-loc",
+    tender_id: "",
 };
