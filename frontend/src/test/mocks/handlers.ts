@@ -17,9 +17,11 @@ import { mockPVDesign } from '../fixtures/pvDesign'
 const testState = {
     energyFetchCount: {} as Record<string, number>,
     recalculateCount: {} as Record<string, number>,
+    proposalTaskCount: {} as Record<string, number>,
     reset: () => {
         testState.energyFetchCount = {};
         testState.recalculateCount = {};
+        testState.proposalTaskCount = {};
     }
 };
 
@@ -184,5 +186,47 @@ export const handlers = [
             ...mockPVDesign,
             id,
         })
+    }),
+
+    // POST /api/site-designs/:id/proposal
+    http.post('*/api/site-designs/:id/proposal', ({ params }) => {
+        const id = params.id as string;
+        const taskId = `task-${id}-${Date.now()}`;
+        testState.proposalTaskCount[taskId] = 0;
+        return HttpResponse.json({ task_id: taskId, status: 'PENDING' });
+    }),
+
+    // GET /api/tasks/:taskId
+    http.get('*/api/tasks/:taskId', ({ params }) => {
+        const taskId = params.taskId as string;
+
+        if (taskId.includes('fail')) {
+            return HttpResponse.json({
+                task_id: taskId,
+                status: 'FAILURE',
+                error: 'PDF generation failed'
+            });
+        }
+
+        const currentCount = testState.proposalTaskCount[taskId] || 0;
+        testState.proposalTaskCount[taskId] = currentCount + 1;
+        const count = testState.proposalTaskCount[taskId];
+
+        // Simulate transitions: PENDING -> STARTED -> SUCCESS
+        if (count <= 1) return HttpResponse.json({ task_id: taskId, status: 'PENDING' });
+        if (count === 2) return HttpResponse.json({ task_id: taskId, status: 'STARTED' });
+
+        return HttpResponse.json({
+            task_id: taskId,
+            status: 'SUCCESS',
+            result_url: `http://localhost/proposals/${taskId}.pdf`
+        });
+    }),
+
+    // GET /api/site-designs/:id/export-csv
+    http.get('*/api/site-designs/:id/export-csv', () => {
+        return HttpResponse.text('mock,csv,data', {
+            headers: { 'Content-Type': 'text/csv' }
+        });
     }),
 ]

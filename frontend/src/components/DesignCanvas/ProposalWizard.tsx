@@ -192,7 +192,8 @@ export function ProposalWizard({ designId, open, onOpenChange }: ProposalWizardP
 
     // Derived States
     const isSelectionValid = Object.values(selectedSections).some((v) => v);
-    const isGenerating = taskQuery.data?.status === "PENDING" || taskQuery.data?.status === "STARTED" || generateMutation.isPending;
+    // Include taskQuery.isPending to handle initial fetch before data is available
+    const isGenerating = taskQuery.data?.status === "PENDING" || taskQuery.data?.status === "STARTED" || generateMutation.isPending || (!!taskId && taskQuery.isPending);
     const isSuccess = taskQuery.data?.status === "SUCCESS";
     const hasPdfUrl = !!pdfUrl;
 
@@ -347,12 +348,11 @@ export function ProposalWizard({ designId, open, onOpenChange }: ProposalWizardP
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-lg">
                                 <div className="border rounded-lg p-6 flex flex-col items-center space-y-4 hover:border-primary/50 transition-colors shadow-sm">
-                                    <FileText className="w-12 h-12 text-red-500" />
                                     <div className="text-center">
                                         <div className="font-medium">Proposal PDF</div>
                                         <div className="text-xs text-muted-foreground">Complete proposal document</div>
                                     </div>
-                                    <Button onClick={handleDownloadPDF} className="w-full" disabled={!hasPdfUrl}>
+                                    <Button onClick={handleDownloadPDF} className="w-full" disabled={!hasPdfUrl} data-testid="download-pdf-btn">
                                         Download PDF
                                     </Button>
                                 </div>
@@ -368,6 +368,7 @@ export function ProposalWizard({ designId, open, onOpenChange }: ProposalWizardP
                                         variant="outline"
                                         className="w-full"
                                         disabled={exportMutation.isPending}
+                                        data-testid="download-csv-btn"
                                     >
                                         {exportMutation.isPending && (
                                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
