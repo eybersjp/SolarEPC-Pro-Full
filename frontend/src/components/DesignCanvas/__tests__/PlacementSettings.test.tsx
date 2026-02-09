@@ -83,7 +83,7 @@ describe('PlacementSettings', () => {
 
         server.use(
             http.put('*/api/site-designs/:id', async ({ request }) => {
-                const body = await request.json();
+                const body = await request.json() as any;
                 updateSpy(body);
                 return HttpResponse.json({ ...mockSiteDesign, ...body });
             })
@@ -103,12 +103,12 @@ describe('PlacementSettings', () => {
 
         // Advance synchronously
         act(() => {
-            vi.advanceTimersByTime(100);
+            vi.advanceTimersByTime(29000);
         });
         expect(updateSpy).not.toHaveBeenCalled();
 
         act(() => {
-            vi.advanceTimersByTime(3000);
+            vi.advanceTimersByTime(1000);
         });
 
         await waitFor(() => {
@@ -122,14 +122,14 @@ describe('PlacementSettings', () => {
         expect(useDesignCanvasStore.getState().syncState).toBe('synced');
     });
 
-    it('should coalesce rapid changes into single API call', async () => {
+    it('should coalesce rapid changes into single API call within 30s window', async () => {
         vi.useFakeTimers();
         const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
         const updateSpy = vi.fn();
 
         server.use(
             http.put('*/api/site-designs/:id', async ({ request }) => {
-                const body = await request.json();
+                const body = await request.json() as any;
                 updateSpy(body);
                 return HttpResponse.json({ ...mockSiteDesign, ...body });
             })
@@ -143,16 +143,16 @@ describe('PlacementSettings', () => {
 
         await user.clear(azimuthInput);
         await user.type(azimuthInput, '190');
-        act(() => { vi.advanceTimersByTime(500); });
+        act(() => { vi.advanceTimersByTime(1000); });
 
         await user.clear(azimuthInput);
         await user.type(azimuthInput, '195');
-        act(() => { vi.advanceTimersByTime(500); });
+        act(() => { vi.advanceTimersByTime(1000); });
 
         await user.clear(azimuthInput);
         await user.type(azimuthInput, '200');
 
-        act(() => { vi.advanceTimersByTime(3500); });
+        act(() => { vi.advanceTimersByTime(29500); });
 
         await waitFor(() => {
             expect(updateSpy).toHaveBeenCalledTimes(1);
@@ -171,7 +171,7 @@ describe('PlacementSettings', () => {
 
         server.use(
             http.put('*/api/site-designs/:id', async ({ request }) => {
-                const body = await request.json();
+                const body = await request.json() as any;
                 updateSpy(body);
                 return HttpResponse.json({ ...mockSiteDesign, ...body });
             })
@@ -186,7 +186,9 @@ describe('PlacementSettings', () => {
         await user.clear(rowSpacingInput);
         await user.type(rowSpacingInput, '5.5');
 
-        act(() => { vi.advanceTimersByTime(3500); });
+        act(() => { vi.advanceTimersByTime(29000); });
+        expect(updateSpy).not.toHaveBeenCalled();
+        act(() => { vi.advanceTimersByTime(1500); });
 
         await waitFor(() => {
             expect(updateSpy).toHaveBeenCalledWith(expect.objectContaining({
@@ -204,7 +206,9 @@ describe('PlacementSettings', () => {
         // Check local state
         expect(useDesignCanvasStore.getState().placementSettings.module_orientation).toBe('landscape');
 
-        act(() => { vi.advanceTimersByTime(3500); });
+        act(() => { vi.advanceTimersByTime(29000); });
+        expect(updateSpy).not.toHaveBeenCalled();
+        act(() => { vi.advanceTimersByTime(1500); });
 
         await waitFor(() => {
             expect(updateSpy).toHaveBeenCalledWith(expect.objectContaining({

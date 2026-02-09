@@ -167,5 +167,36 @@ describe('useDesignCanvasStore', () => {
             useDesignCanvasStore.getState().setSyncState('failed')
             expect(useDesignCanvasStore.getState().retryCount).toBe(2)
         })
+
+        it('should only update lastSyncedAt when syncState becomes synced', () => {
+            const initialSyncedAt = null
+            useDesignCanvasStore.setState({ lastSyncedAt: initialSyncedAt })
+
+            useDesignCanvasStore.getState().setSyncState('pending')
+            expect(useDesignCanvasStore.getState().lastSyncedAt).toBeNull()
+
+            useDesignCanvasStore.getState().setSyncState('syncing')
+            expect(useDesignCanvasStore.getState().lastSyncedAt).toBeNull()
+
+            useDesignCanvasStore.getState().setSyncState('synced')
+            const firstSync = useDesignCanvasStore.getState().lastSyncedAt
+            expect(firstSync).toBeInstanceOf(Date)
+
+            // Pending again should not clear it
+            useDesignCanvasStore.getState().setSyncState('pending')
+            expect(useDesignCanvasStore.getState().lastSyncedAt).toEqual(firstSync)
+        })
+
+        it('should persist lastMutationData for manual retry', () => {
+            const mutationData = { name: 'Test Design Update' }
+            useDesignCanvasStore.getState().setLastMutationData(mutationData)
+            expect(useDesignCanvasStore.getState().lastMutationData).toEqual(mutationData)
+
+            useDesignCanvasStore.getState().setSyncState('failed')
+            expect(useDesignCanvasStore.getState().lastMutationData).toEqual(mutationData)
+
+            useDesignCanvasStore.getState().setLastMutationData(null)
+            expect(useDesignCanvasStore.getState().lastMutationData).toBeNull()
+        })
     })
 })

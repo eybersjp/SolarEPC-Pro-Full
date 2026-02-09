@@ -18,10 +18,12 @@ const testState = {
     energyFetchCount: {} as Record<string, number>,
     recalculateCount: {} as Record<string, number>,
     proposalTaskCount: {} as Record<string, number>,
+    putCallCount: {} as Record<string, number>,
     reset: () => {
         testState.energyFetchCount = {};
         testState.recalculateCount = {};
         testState.proposalTaskCount = {};
+        testState.putCallCount = {};
     }
 };
 
@@ -33,28 +35,43 @@ export const handlers = [
     }),
 
     // GET /api/site-designs/:id
-    http.get('*/api/site-designs/:id', ({ params }) => {
+    http.get('*/api/site-designs/:id', ({ params, request }) => {
         const id = params.id as string;
+        const url = new URL(request.url);
+        const isStale = url.searchParams.get('stale') === 'true' || id.includes('stale-test');
+
         if (id.includes('zero')) return HttpResponse.json(mockSiteDesignZeroCapacity);
-        if (id.includes('stale-test')) {
-            const now = new Date();
-            return HttpResponse.json({
-                ...mockSiteDesign,
-                id,
-                updated_at: now.toISOString(),
-            });
-        }
+
+        const now = new Date();
+        const updatedAt = isStale
+            ? new Date(now.getTime() - 1000 * 60 * 60).toISOString() // 1 hour ago
+            : now.toISOString();
 
         return HttpResponse.json({
             ...mockSiteDesign,
             id,
             total_modules: 80,
             system_size_kwp: 44.0,
+            updated_at: updatedAt,
         })
     }),
 
     // PUT /api/site-designs/:id
     http.put('*/api/site-designs/:id', async ({ params, request }) => {
+        const id = params.id as string;
+        const url = new URL(request.url);
+        const retryTest = url.searchParams.get('retry-test');
+
+        testState.putCallCount[id] = (testState.putCallCount[id] || 0) + 1;
+        const count = testState.putCallCount[id];
+
+        if (retryTest === 'true' || id.includes('retry-test')) {
+            const failCount = parseInt(url.searchParams.get('fail-count') || '3');
+            if (count <= failCount) {
+                return new HttpResponse(null, { status: 500 });
+            }
+        }
+
         const body = await request.json() as any
         return HttpResponse.json({
             ...mockSiteDesign,

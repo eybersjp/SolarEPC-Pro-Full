@@ -108,3 +108,9 @@ export const mockSiteDesignNoLocation: SiteDesignResponse = {
     id: "design-no-loc",
     tender_id: "",
 };
+
+export const mockSiteDesignWithPendingSync: SiteDesignResponse = {
+    ...mockSiteDesign,
+    id: "design-pending",
+    updated_at: new Date(Date.now() - 1000 * 60).toISOString(), // 1 minute ago
+};

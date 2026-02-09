@@ -1,5 +1,5 @@
 import React, { ReactElement } from 'react'
-import { render, RenderOptions } from '@testing-library/react'
+import { render, RenderOptions, act } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 const createTestQueryClient = () =>
@@ -31,6 +31,30 @@ export const createWrapper = () => {
         <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     )
 }
+
+/**
+ * Helper to advance timers for debounce testing
+ */
+export const advanceDebounceTimer = async (ms = 30000) => {
+    act(() => {
+        vi.advanceTimersByTime(ms);
+    });
+    // Flush microtasks
+    await Promise.resolve();
+};
+
+/**
+ * Helper to mock sync state in the store
+ */
+import { useDesignCanvasStore } from '@/stores/useDesignCanvasStore';
+export const mockSyncState = (state: 'synced' | 'pending' | 'syncing' | 'failed', overrides = {}) => {
+    useDesignCanvasStore.setState({
+        syncState: state,
+        retryCount: 0,
+        lastSyncedAt: state === 'synced' ? new Date() : null,
+        ...overrides,
+    });
+};
 
 export * from '@testing-library/react'
 export { renderWithProviders, createTestQueryClient }

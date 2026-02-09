@@ -138,46 +138,81 @@ describe('useSiteDesigns hooks', () => {
             expect(toast.error).toHaveBeenCalled()
         })
 
-        it('should retry with exponential backoff on failure', async () => {
-            // Using real timers to avoid coordination issues with MSW and TanStack Query v5
-            vi.stubEnv('NODE_ENV', 'development')
+        it('should retry with exponential backoff and verify all stages', async () => {
+            vi.useFakeTimers();
+            const { wrapper } = createWrapper();
+            const designId = 'design-retry-test';
 
-            const { wrapper } = createWrapper()
-            const designId = 'design-retry-test'
-
-            let callCount = 0
+            let callCount = 0;
             server.use(
                 http.put('*/api/site-designs/:id', async () => {
-                    callCount++
-                    if (callCount <= 2) {
-                        return new HttpResponse(null, { status: 500 })
+                    callCount++;
+                    if (callCount <= 3) { // Fail first 3 attempts
+                        return new HttpResponse(null, { status: 500 });
                     }
-                    return HttpResponse.json({ ...mockSiteDesign, name: 'Retry Success', id: designId })
+                    return HttpResponse.json({ ...mockSiteDesign, name: 'Retry Success', id: designId });
                 })
-            )
+            );
 
-            const { result } = renderHook(() => useUpdateSiteDesignMutation(designId), { wrapper })
+            const { result } = renderHook(() => useUpdateSiteDesignMutation(designId), { wrapper });
 
-            // Trigger mutation
             act(() => {
-                result.current.mutate({ name: 'Retry Success' })
-            })
+                result.current.mutate({ name: 'Retry Success' });
+            });
 
-            // 1. First attempt fails immediately. retryDelay is called.
-            // Wait for retryCount to reach 1 (after first failure, before first retry)
-            await waitFor(() => expect(useDesignCanvasStore.getState().retryCount).toBe(1), { timeout: 2000 })
+            // 1. Initial attempt fails immediately
+            await waitFor(() => expect(useDesignCanvasStore.getState().retryCount).toBe(1));
+            expect(toast.error).toHaveBeenCalledWith("Failed to save changes. Retrying...");
 
-            // 2. Wait for first retry (1s delay)
-            // The second attempt will fail and set retryCount to 2
-            await waitFor(() => expect(useDesignCanvasStore.getState().retryCount).toBe(2), { timeout: 3000 })
+            // 2. Wait 1000ms for first retry
+            act(() => { vi.advanceTimersByTime(1100); });
+            await waitFor(() => expect(useDesignCanvasStore.getState().retryCount).toBe(2));
 
-            // 3. Wait for second retry (2s delay)
-            // The third attempt will succeed
-            await waitFor(() => expect(useDesignCanvasStore.getState().syncState).toBe('synced'), { timeout: 5000 })
+            // 3. Wait 2000ms for second retry
+            act(() => { vi.advanceTimersByTime(2100); });
+            await waitFor(() => expect(useDesignCanvasStore.getState().retryCount).toBe(3));
 
-            expect(useDesignCanvasStore.getState().retryCount).toBe(0)
-            expect(result.current.isSuccess).toBe(true)
-        }, 15000)
+            // 4. Wait 4000ms for third retry (which succeeds)
+            act(() => { vi.advanceTimersByTime(4100); });
+            await waitFor(() => expect(useDesignCanvasStore.getState().syncState).toBe('synced'));
+
+            expect(useDesignCanvasStore.getState().retryCount).toBe(0);
+            expect(toast.success).toHaveBeenCalledWith("Design saved");
+            expect(callCount).toBe(4);
+        });
+
+        it('should handle final failure after 3 retries and preserve lastMutationData', async () => {
+            vi.useFakeTimers();
+            const { wrapper } = createWrapper();
+            const designId = 'design-failure-test';
+
+            server.use(
+                http.put('*/api/site-designs/:id', () => {
+                    return new HttpResponse(null, { status: 500 });
+                })
+            );
+
+            const { result } = renderHook(() => useUpdateSiteDesignMutation(designId), { wrapper });
+
+            act(() => {
+                result.current.mutate({ name: 'Persistent Failure' });
+            });
+
+            // Advance through all retries (1s, 2s, 4s)
+            await waitFor(() => expect(useDesignCanvasStore.getState().retryCount).toBe(1));
+            act(() => { vi.advanceTimersByTime(1100); }); // Wait for 1st retry
+
+            await waitFor(() => expect(useDesignCanvasStore.getState().retryCount).toBe(2));
+            act(() => { vi.advanceTimersByTime(2100); }); // Wait for 2nd retry
+
+            await waitFor(() => expect(useDesignCanvasStore.getState().retryCount).toBe(3));
+            act(() => { vi.advanceTimersByTime(4100); }); // Wait for 3rd retry
+
+            await waitFor(() => expect(useDesignCanvasStore.getState().syncState).toBe('failed'));
+
+            expect(toast.error).toHaveBeenCalledWith("Failed to save changes after 3 attempts. Click retry to try again.");
+            expect(useDesignCanvasStore.getState().lastMutationData).toEqual({ name: 'Persistent Failure' });
+        });
     })
 
     describe('useCreateSiteDesignMutation', () => {

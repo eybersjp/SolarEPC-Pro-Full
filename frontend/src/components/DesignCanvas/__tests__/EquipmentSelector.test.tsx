@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { EquipmentSelector } from '../EquipmentSelector';
 import { renderWithProviders } from '@/test/utils';
@@ -121,13 +121,55 @@ describe('EquipmentSelector', () => {
         });
     });
 
-    it.skip('should select inverter and update store/mutation', async () => {
-        const user = userEvent.setup({ pointerEventsCheck: 0 });
+    it('should select module and trigger 30-second debounced save', async () => {
+        vi.useFakeTimers();
+        const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime, pointerEventsCheck: 0 });
+        const updateSpy = vi.fn();
+        server.use(
+            http.put('*/api/site-designs/:id', async ({ request }) => {
+                const body = await request.json() as any;
+                updateSpy(body);
+                return HttpResponse.json({ ...mockSiteDesign, ...body });
+            })
+        );
+
+        renderWithProviders(<EquipmentSelector designId={designId} />);
+        await waitFor(() => expect(screen.getByLabelText(/Solar Module/i)).toBeInTheDocument());
+
+        const moduleTrigger = screen.getByLabelText(/Solar Module/i);
+        await user.click(moduleTrigger);
+        const moduleOptionText = `${mockModulesList[0].manufacturer} ${mockModulesList[0].model} (${mockModulesList[0].wattage}W)`;
+        const moduleOption = await screen.findByRole('option', { name: moduleOptionText });
+        await user.click(moduleOption);
+
+        // Immediate state check
+        expect(useDesignCanvasStore.getState().syncState).toBe('pending');
+        expect(useDesignCanvasStore.getState().equipmentModuleId).toBe(mockModulesList[0].id);
+        expect(updateSpy).not.toHaveBeenCalled();
+
+        // Advance 29s - still no call
+        act(() => { vi.advanceTimersByTime(29000); });
+        expect(updateSpy).not.toHaveBeenCalled();
+
+        // Advance 1s - call made
+        act(() => { vi.advanceTimersByTime(1500); }); // Extra buffer for async reactive state
+        await waitFor(() => {
+            expect(updateSpy).toHaveBeenCalledWith(expect.objectContaining({
+                equipment_module_id: mockModulesList[0].id
+            }));
+        });
+
+        expect(useDesignCanvasStore.getState().syncState).toBe('synced');
+    });
+
+    it('should select inverter and trigger 30-second debounced save', async () => {
+        vi.useFakeTimers();
+        const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime, pointerEventsCheck: 0 });
         const updateSpy = vi.fn();
 
         server.use(
             http.put('*/api/site-designs/:id', async ({ request }) => {
-                const body = await request.json();
+                const body = await request.json() as any;
                 updateSpy(body);
                 return HttpResponse.json({ ...mockSiteDesign, ...body });
             })
@@ -144,9 +186,9 @@ describe('EquipmentSelector', () => {
         const option = await screen.findByRole('option', { name: optionText });
         await user.click(option);
 
-        await waitFor(() => {
-            expect(screen.getByText('50kW')).toBeInTheDocument();
-        });
+        expect(useDesignCanvasStore.getState().syncState).toBe('pending');
+
+        act(() => { vi.advanceTimersByTime(31000); });
 
         await waitFor(() => {
             expect(updateSpy).toHaveBeenCalledWith(expect.objectContaining({
@@ -157,72 +199,43 @@ describe('EquipmentSelector', () => {
         expect(useDesignCanvasStore.getState().equipmentInverterId).toBe(mockInvertersList[0].id);
     });
 
-    it.skip('should update store when module is selected and verify full selection state', async () => {
-        const user = userEvent.setup({ pointerEventsCheck: 0 });
+    it('should coalesce rapid equipment changes into single save', async () => {
+        vi.useFakeTimers();
+        const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime, pointerEventsCheck: 0 });
         const updateSpy = vi.fn();
         server.use(
             http.put('*/api/site-designs/:id', async ({ request }) => {
-                const body = await request.json();
+                const body = await request.json() as any;
                 updateSpy(body);
                 return HttpResponse.json({ ...mockSiteDesign, ...body });
             })
         );
 
         renderWithProviders(<EquipmentSelector designId={designId} />);
-
         await waitFor(() => expect(screen.getByLabelText(/Solar Module/i)).toBeInTheDocument());
 
+        // Select Module 0
         const moduleTrigger = screen.getByLabelText(/Solar Module/i);
         await user.click(moduleTrigger);
-        const moduleOptionText = `${mockModulesList[0].manufacturer} ${mockModulesList[0].model} (${mockModulesList[0].wattage}W)`;
-        const moduleOption = await screen.findByRole('option', { name: moduleOptionText });
-        await user.click(moduleOption);
+        await user.click(await screen.findByRole('option', { name: new RegExp(mockModulesList[0].model) }));
 
-        await waitFor(() => {
-            expect(updateSpy).toHaveBeenCalledWith(expect.objectContaining({
-                equipment_module_id: mockModulesList[0].id
-            }));
-        });
+        act(() => { vi.advanceTimersByTime(10000); });
 
-        expect(useDesignCanvasStore.getState().equipmentModuleId).toBe(mockModulesList[0].id);
-
+        // Select Inverter 0
         const inverterTrigger = screen.getByLabelText(/Inverter/i);
-        await user.click(inverterTrigger); // Open first
+        await user.click(inverterTrigger);
+        await user.click(await screen.findByRole('option', { name: new RegExp(mockInvertersList[0].model) }));
 
-        const inverterOptionText = `${mockInvertersList[0].manufacturer} ${mockInvertersList[0].model} (${mockInvertersList[0].capacity_kw}kW)`;
-        const inverterOption = await screen.findByRole('option', { name: inverterOptionText });
-        await user.click(inverterOption);
+        act(() => { vi.advanceTimersByTime(31000); });
 
         await waitFor(() => {
+            expect(updateSpy).toHaveBeenCalledTimes(1);
             expect(updateSpy).toHaveBeenCalledWith(expect.objectContaining({
+                equipment_module_id: mockModulesList[0].id,
                 equipment_inverter_id: mockInvertersList[0].id
             }));
         });
 
-        expect(useDesignCanvasStore.getState().equipmentInverterId).toBe(mockInvertersList[0].id);
         expect(useDesignCanvasStore.getState().hasEquipmentSelected).toBe(true);
-    });
-
-    it.skip('should show error toast on mutation failure', async () => {
-        const user = userEvent.setup({ pointerEventsCheck: 0 });
-        server.use(
-            http.put('*/api/site-designs/:id', () => {
-                return new HttpResponse(null, { status: 500 });
-            })
-        );
-
-        renderWithProviders(<EquipmentSelector designId={designId} />);
-        await waitFor(() => expect(screen.getByLabelText(/Solar Module/i)).toBeInTheDocument());
-
-        const trigger = screen.getByLabelText(/Solar Module/i);
-        await user.click(trigger);
-
-        const optionText = `${mockModulesList[0].manufacturer} ${mockModulesList[0].model} (${mockModulesList[0].wattage}W)`;
-        const option = await screen.findByRole('option', { name: optionText });
-        await user.click(option);
-
-        await waitFor(() => {
-            expect(toast.error).toHaveBeenCalled();
-        });
     });
 });
