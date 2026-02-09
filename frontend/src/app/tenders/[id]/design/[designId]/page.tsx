@@ -1,84 +1,114 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
-import dynamic from "next/dynamic";
+import { useParams, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { CanvasLayout } from "@/components/DesignCanvas/CanvasLayout";
+import MapCanvas from "@/components/DesignCanvas/MapCanvas";
 import { useSiteDesignQuery } from "@/hooks/useSiteDesigns";
-import { useTender } from "@/lib/hooks/useTenders";
 import { useDesignCanvasStore } from "@/stores/useDesignCanvasStore";
-import { Loader2, AlertCircle } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { DEFAULT_MAP_CONFIG } from "@/lib/mapConfig";
+import { ConfirmDialog } from "@/components/common/ConfirmDialog";
+import { LoadingSpinner, ErrorMessage } from "@/components/common";
 
-// Dynamically import MapCanvas as it uses Leaflet which is client-side only
-const MapCanvas = dynamic(
-    () => import("@/components/DesignCanvas/MapCanvas"),
-    {
-        ssr: false,
-        loading: () => (
-            <div className="h-full w-full flex items-center justify-center bg-slate-900/5 rounded-lg border-2 border-dashed border-slate-200">
-                <div className="flex flex-col items-center gap-2">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary/40" />
-                    <span className="text-sm text-slate-400 font-medium">Loading Map Canvas...</span>
-                </div>
-            </div>
-        )
-    }
-);
+import { createContext, useContext } from "react";
 
-interface DesignPageProps {
-    params: {
-        id: string; // This corresponds to the [id] folder (tenderId)
-        designId: string;
-    };
+interface NavigationContextType {
+    push: (url: string) => void;
+    replace: (url: string) => void;
+    back: () => void;
 }
 
-export default function DesignPage({ params }: DesignPageProps) {
-    const { id: tenderId, designId } = params;
+const NavigationContext = createContext<NavigationContextType | null>(null);
+
+export const useDesignNavigation = () => {
+    const context = useContext(NavigationContext);
+    if (!context) {
+        throw new Error("useDesignNavigation must be used within a NavigationProvider");
+    }
+    return context;
+};
+
+export default function DesignCanvasPage() {
+    const params = useParams();
     const router = useRouter();
+    const tenderId = params.id as string;
+    const designId = params.designId as string;
 
-    // Fetch design data and tender data (for coordinates)
-    const { data: design, isLoading: designLoading, error: designError } = useSiteDesignQuery(designId);
-    const { tender, isLoading: tenderLoading, error: tenderError } = useTender(tenderId);
-
+    const { data: design, isLoading, error } = useSiteDesignQuery(designId);
     const syncState = useDesignCanvasStore((state) => state.syncState);
 
-    // Derived map center - priority to tender coordinates, fallback to default
-    const mapCenter = useMemo((): [number, number] => {
-        if (tender?.latitude && tender?.longitude) {
-            return [tender.latitude, tender.longitude];
-        }
-        return DEFAULT_MAP_CONFIG.center;
-    }, [tender?.latitude, tender?.longitude]);
+    const [isNavigationWarningOpen, setIsNavigationWarningOpen] = useState(false);
+    const [pendingNavigation, setPendingNavigation] = useState<(() => void) | null>(null);
 
-    // Warn about unsaved changes
+    // Browser-native beforeunload handler
     useEffect(() => {
-        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-            if (syncState !== 'synced') {
-                e.preventDefault();
-                e.returnValue = '';
-            }
+        const hasUnsavedChanges = syncState === 'pending' || syncState === 'failed';
+
+        if (!hasUnsavedChanges) return;
+
+        const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+            event.preventDefault();
+            event.returnValue = ''; // Required for Chrome
+            return '';
         };
 
         window.addEventListener('beforeunload', handleBeforeUnload);
         return () => window.removeEventListener('beforeunload', handleBeforeUnload);
     }, [syncState]);
 
-    const isLoading = designLoading || tenderLoading;
-    const error = designError || tenderError;
+    const handleNavigationAttempt = (navigationCallback: () => void) => {
+        const hasUnsavedChanges = syncState === 'pending' || syncState === 'failed';
+
+        if (hasUnsavedChanges) {
+            setPendingNavigation(() => navigationCallback);
+            setIsNavigationWarningOpen(true);
+        } else {
+            navigationCallback();
+        }
+    };
+
+    const handleConfirmNavigation = () => {
+        if (pendingNavigation) {
+            pendingNavigation();
+        }
+        setIsNavigationWarningOpen(false);
+        setPendingNavigation(null);
+    };
+
+    const handleCancelNavigation = () => {
+        setIsNavigationWarningOpen(false);
+        setPendingNavigation(null);
+    };
+
+    const navigationValue: NavigationContextType = {
+        push: (url: string) => handleNavigationAttempt(() => router.push(url)),
+        replace: (url: string) => handleNavigationAttempt(() => router.replace(url)),
+        back: () => handleNavigationAttempt(() => router.back()),
+    };
+
+    // Calculate center from boundary if not available on design object
+    const getCenter = (): [number, number] => {
+        if (!design?.site_boundary?.coordinates?.[0]?.length) {
+            return [0, 0];
+        }
+
+        const coords = design.site_boundary.coordinates[0];
+        let totalLat = 0;
+        let totalLng = 0;
+
+        coords.forEach((coord) => {
+            totalLng += coord[0];
+            totalLat += coord[1];
+        });
+
+        return [totalLat / coords.length, totalLng / coords.length];
+    };
 
     if (isLoading) {
         return (
             <div className="h-screen w-screen flex items-center justify-center bg-slate-50">
-                <div className="flex flex-col items-center">
-                    <div className="relative">
-                        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                        <div className="absolute inset-0 flex items-center justify-center">
-                            <div className="h-2 w-2 bg-primary rounded-full animate-pulse" />
-                        </div>
-                    </div>
-                    <span className="mt-6 text-lg font-semibold text-slate-700">Initializing Design Workspace</span>
-                    <p className="text-slate-400 text-sm mt-1">Retrieving site data and configurations...</p>
+                <div className="text-center">
+                    <LoadingSpinner />
+                    <p className="mt-4 text-sm text-muted-foreground font-medium">Loading Design Canvas...</p>
                 </div>
             </div>
         );
@@ -86,45 +116,41 @@ export default function DesignPage({ params }: DesignPageProps) {
 
     if (error || !design) {
         return (
-            <div className="h-screen w-screen flex items-center justify-center flex-col bg-slate-50 p-6">
-                <div className="bg-white p-10 rounded-2xl shadow-xl border border-slate-200 text-center max-w-md w-full">
-                    <div className="h-16 w-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6">
-                        <AlertCircle className="h-8 w-8 text-red-500" />
-                    </div>
-                    <h1 className="text-2xl font-bold text-slate-900 mb-2">Workspace Error</h1>
-                    <p className="text-slate-500 mb-8 leading-relaxed">
-                        {error instanceof Error ? error.message : "We couldn't load the design session data. Please try again or return to the tender overview."}
-                    </p>
-                    <div className="flex flex-col gap-3">
-                        <button
-                            onClick={() => window.location.reload()}
-                            className="bg-primary text-white px-6 py-3 rounded-xl font-semibold hover:bg-primary/90 transition-all shadow-md active:scale-95"
-                        >
-                            Retry Loading
-                        </button>
-                        <button
-                            onClick={() => router.push(`/tenders/${tenderId}`)}
-                            className="text-slate-500 font-medium hover:text-slate-800 transition-colors py-2"
-                        >
-                            Return to Tender
-                        </button>
-                    </div>
-                </div>
+            <div className="h-screen w-screen flex items-center justify-center bg-slate-50">
+                <ErrorMessage
+                    title="Design Not Found"
+                    message="The requested design could not be loaded. It may have been deleted or you may not have permission to view it."
+                />
             </div>
         );
     }
 
     return (
-        <CanvasLayout title={`Design: ${design.name}`} tenderId={tenderId} designId={designId}>
-            <div className="w-full h-full p-4 relative overflow-hidden">
-                <div className="w-full h-full bg-slate-200 rounded-xl overflow-hidden shadow-2xl border border-white/20">
+        <NavigationContext.Provider value={navigationValue}>
+            <div className="h-screen w-screen overflow-hidden">
+                <CanvasLayout
+                    title={design.name}
+                    tenderId={tenderId}
+                    designId={designId}
+                >
                     <MapCanvas
-                        center={mapCenter}
+                        center={getCenter()}
                         tenderId={tenderId}
                         designId={designId}
                     />
-                </div>
+                </CanvasLayout>
+
+                <ConfirmDialog
+                    open={isNavigationWarningOpen}
+                    onOpenChange={(open) => !open && handleCancelNavigation()}
+                    title="Unsaved Changes"
+                    description="You have unsaved changes that haven't been synced. Are you sure you want to leave? Your changes may be lost."
+                    confirmLabel="Leave Anyway"
+                    cancelLabel="Stay on Page"
+                    onConfirm={handleConfirmNavigation}
+                    variant="danger"
+                />
             </div>
-        </CanvasLayout>
+        </NavigationContext.Provider>
     );
 }

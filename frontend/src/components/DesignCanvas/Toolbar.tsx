@@ -1,9 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Save, Loader2, Check, AlertCircle, FileText } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useDesignCanvasStore } from "@/stores/useDesignCanvasStore";
 import { ProposalWizard } from "./ProposalWizard";
 import { useState } from "react";
+
+import { useDesignNavigation } from "../../app/tenders/[id]/design/[designId]/page";
 
 interface ToolbarProps {
     tenderId: string;
@@ -12,9 +13,13 @@ interface ToolbarProps {
 }
 
 export function Toolbar({ tenderId, designId, title }: ToolbarProps) {
-    const router = useRouter();
+    const { back } = useDesignNavigation();
     const syncState = useDesignCanvasStore((state) => state.syncState);
     const [isWizardOpen, setIsWizardOpen] = useState(false);
+
+    const handleBackClick = () => {
+        back();
+    };
 
     return (
         <div className="h-14 border-b bg-white flex items-center justify-between px-4 z-10 relative">
@@ -22,7 +27,7 @@ export function Toolbar({ tenderId, designId, title }: ToolbarProps) {
                 <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => router.back()}
+                    onClick={handleBackClick}
                     title="Back to Designs"
                 >
                     <ArrowLeft className="h-5 w-5" />
