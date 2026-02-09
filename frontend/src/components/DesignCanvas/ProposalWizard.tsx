@@ -17,6 +17,7 @@ import { Loader2, FileText, FileSpreadsheet, AlertCircle, CheckCircle } from "lu
 import { useGenerateProposalMutation, useTaskStatusQuery, useExportCSV } from "@/hooks/useProposal";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useProposalWizardPersistence } from "@/hooks/useProposalWizardPersistence";
 
 interface ProposalWizardProps {
     designId: string;
@@ -62,6 +63,45 @@ export function ProposalWizard({ designId, open, onOpenChange }: ProposalWizardP
 
     const exportMutation = useExportCSV(designId);
 
+    // Persistence
+    const { savePersistedState, loadPersistedState, clearPersistedState } = useProposalWizardPersistence(designId);
+    const [hasLoadedState, setHasLoadedState] = useState(false);
+
+    // Load state on open
+    useEffect(() => {
+        if (open && !hasLoadedState) {
+            const persisted = loadPersistedState();
+            if (persisted) {
+                setStep(persisted.step);
+                setTitle(persisted.title);
+                // Cast to any because the Record<string, boolean> vs generic type might need detailed casting or just trust it matches
+                // For safety, we can merge with defaultSections
+                setSelectedSections((prev) => ({ ...prev, ...persisted.selectedSections }));
+                setTaskId(persisted.taskId);
+                setPdfUrl(persisted.pdfUrl);
+                toast.info("Resuming your proposal...");
+            }
+            setHasLoadedState(true);
+        }
+    }, [open, hasLoadedState, loadPersistedState]);
+
+    // Save state on change (debounced)
+    useEffect(() => {
+        if (!open) return;
+
+        const timer = setTimeout(() => {
+            savePersistedState({
+                step,
+                title,
+                selectedSections,
+                taskId,
+                pdfUrl
+            });
+        }, 500);
+
+        return () => clearTimeout(timer);
+    }, [step, title, selectedSections, taskId, pdfUrl, open, savePersistedState]);
+
     // Monitor task status
     useEffect(() => {
         if (taskQuery.data?.status === "SUCCESS" && taskQuery.data.result_url) {
@@ -105,6 +145,7 @@ export function ProposalWizard({ designId, open, onOpenChange }: ProposalWizardP
     };
 
     const handleReset = () => {
+        clearPersistedState();
         setStep(1);
         setTitle("");
         setSelectedSections(defaultSections);
@@ -120,7 +161,15 @@ export function ProposalWizard({ designId, open, onOpenChange }: ProposalWizardP
             const confirm = window.confirm("Proposal generation is in progress. Are you sure you want to close?");
             if (!confirm) return;
         }
+
+        // If successfully completed and user closes, clear persistence and reset state
+        if (step === 3 && pdfUrl) {
+            handleReset();
+        }
+
         onOpenChange(false);
+        // Reset the loaded flag so next open will try to load persistence again (or start fresh if we cleared it)
+        setHasLoadedState(false);
     };
 
     const handleDownloadPDF = () => {

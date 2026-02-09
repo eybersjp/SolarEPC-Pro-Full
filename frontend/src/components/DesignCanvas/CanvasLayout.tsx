@@ -18,7 +18,7 @@ export function CanvasLayout({ children, title, tenderId, designId }: CanvasLayo
 
     return (
         <div className="flex flex-col h-screen w-screen overflow-hidden bg-slate-50">
-            <Toolbar title={title} tenderId={tenderId} />
+            <Toolbar title={title} tenderId={tenderId} designId={designId} />
 
             <div className="flex-1 flex overflow-hidden relative">
                 {/* Main Canvas Area */}

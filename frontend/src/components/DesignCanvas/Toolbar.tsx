@@ -2,15 +2,19 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Save, Loader2, Check, AlertCircle, FileText } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useDesignCanvasStore } from "@/stores/useDesignCanvasStore";
+import { ProposalWizard } from "./ProposalWizard";
+import { useState } from "react";
 
 interface ToolbarProps {
     tenderId: string;
+    designId: string;
     title: string;
 }
 
-export function Toolbar({ tenderId, title }: ToolbarProps) {
+export function Toolbar({ tenderId, designId, title }: ToolbarProps) {
     const router = useRouter();
     const syncState = useDesignCanvasStore((state) => state.syncState);
+    const [isWizardOpen, setIsWizardOpen] = useState(false);
 
     return (
         <div className="h-14 border-b bg-white flex items-center justify-between px-4 z-10 relative">
@@ -56,11 +60,17 @@ export function Toolbar({ tenderId, title }: ToolbarProps) {
                     Save Copy
                 </Button>
 
-                <Button variant="default" size="sm" onClick={() => console.log("Generate Proposal clicked")}>
+                <Button variant="default" size="sm" onClick={() => setIsWizardOpen(true)}>
                     <FileText className="h-4 w-4 mr-2" />
                     Generate Proposal
                 </Button>
             </div>
+
+            <ProposalWizard
+                designId={designId}
+                open={isWizardOpen}
+                onOpenChange={setIsWizardOpen}
+            />
         </div>
     );
 }
