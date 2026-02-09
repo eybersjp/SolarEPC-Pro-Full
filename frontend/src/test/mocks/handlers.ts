@@ -12,6 +12,8 @@ import {
 } from '../fixtures/siteDesign'
 import { mockModulesList, mockInvertersList } from '../fixtures/equipment'
 import { mockPVDesign } from '../fixtures/pvDesign'
+import { mockVersionsList, mockVersionDetail, mockVersionRestoreResponse } from '../fixtures/designVersion'
+import { DesignVersionResponse } from '@/types'
 
 // Internal state for managing transitions in mocks
 const testState = {
@@ -19,11 +21,17 @@ const testState = {
     recalculateCount: {} as Record<string, number>,
     proposalTaskCount: {} as Record<string, number>,
     putCallCount: {} as Record<string, number>,
+    versionCreateCount: {} as Record<string, number>,
+    versionRestoreCount: {} as Record<string, number>,
+    versions: {} as Record<string, DesignVersionResponse[]>,
     reset: () => {
         testState.energyFetchCount = {};
         testState.recalculateCount = {};
         testState.proposalTaskCount = {};
         testState.putCallCount = {};
+        testState.versionCreateCount = {};
+        testState.versionRestoreCount = {};
+        testState.versions = {};
     }
 };
 
@@ -245,5 +253,78 @@ export const handlers = [
         return HttpResponse.text('mock,csv,data', {
             headers: { 'Content-Type': 'text/csv' }
         });
+    }),
+
+    // POST /api/site-designs/:id/versions
+    http.post('*/api/site-designs/:id/versions', async ({ params, request }) => {
+        const designId = params.id as string;
+        const body = await request.json() as any;
+
+        testState.versionCreateCount[designId] = (testState.versionCreateCount[designId] || 0) + 1;
+
+        const newVersion: DesignVersionResponse = {
+            id: `version-${Date.now()}`,
+            site_design_id: designId,
+            version_name: body.version_name,
+            notes: body.notes || null,
+            created_at: new Date().toISOString(),
+            created_by_name: "Test User",
+            total_modules: 80,
+            system_size_kwp: 44.0,
+        };
+
+        if (designId.includes('error-design')) {
+            return HttpResponse.json({ detail: 'Internal Server Error' }, { status: 500 });
+        }
+
+        // Store in test state
+        if (!testState.versions[designId]) {
+            testState.versions[designId] = [];
+        }
+        testState.versions[designId].unshift(newVersion);
+
+        return HttpResponse.json(newVersion, { status: 201 });
+    }),
+
+    // GET /api/site-designs/:id/versions
+    http.get('*/api/site-designs/:id/versions', ({ params }) => {
+        const designId = params.id as string;
+
+        if (designId.includes('no-versions')) {
+            return HttpResponse.json([]);
+        }
+
+        if (designId.includes('error-versions')) {
+            return HttpResponse.json({ detail: 'Failed to fetch versions' }, { status: 500 });
+        }
+
+        // Return stored versions or default mock
+        const versions = testState.versions[designId] || mockVersionsList;
+        return HttpResponse.json(versions);
+    }),
+
+    // GET /api/site-designs/:designId/versions/:versionId
+    http.get('*/api/site-designs/:designId/versions/:versionId', ({ params }) => {
+        const versionId = params.versionId as string;
+
+        if (versionId.includes('not-found')) {
+            return HttpResponse.json({ detail: 'Version not found' }, { status: 404 });
+        }
+
+        return HttpResponse.json(mockVersionDetail);
+    }),
+
+    // POST /api/site-designs/:designId/restore/:versionId
+    http.post('*/api/site-designs/:designId/restore/:versionId', ({ params }) => {
+        const designId = params.designId as string;
+
+        testState.versionRestoreCount[designId] = (testState.versionRestoreCount[designId] || 0) + 1;
+        const count = testState.versionRestoreCount[designId];
+
+        if (designId.includes('restore-fail') && count <= 3) {
+            return new HttpResponse(null, { status: 500 });
+        }
+
+        return HttpResponse.json(mockVersionRestoreResponse);
     }),
 ]

@@ -1,8 +1,16 @@
 import { describe, it, expect, vi } from 'vitest'
 import { renderHook, waitFor, act } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { useUpdateSiteDesignMutation, useCreateSiteDesignMutation, useDeleteSiteDesignMutation } from '../useSiteDesigns'
-import { mockSiteDesign } from '../../test/fixtures/siteDesign'
+import {
+    useUpdateSiteDesignMutation,
+    useCreateSiteDesignMutation,
+    useDeleteSiteDesignMutation,
+    useCreateVersionMutation,
+    useVersionsQuery,
+    useVersionDetailQuery,
+    useRestoreVersionMutation
+} from '../useSiteDesigns'
+import { mockSiteDesign, mockVersionRestoreResponse } from '../../test/fixtures/siteDesign'
 import { server } from '../../test/mocks/server'
 import { http, HttpResponse } from 'msw'
 import React from 'react'
@@ -256,4 +264,315 @@ describe('useSiteDesigns hooks', () => {
             expect(toast.success).toHaveBeenCalledWith('Design deleted')
         })
     })
-})
+
+    describe('Version Management Hooks', () => {
+        beforeEach(() => {
+            vi.clearAllMocks();
+            useDesignCanvasStore.setState({
+                syncState: 'synced',
+                retryCount: 0,
+                lastSyncedAt: null,
+                placementLoading: false,
+            });
+        });
+
+        describe('useCreateVersionMutation', () => {
+            it('should successfully create a version with optimistic update', async () => {
+                const { queryClient, wrapper } = createWrapper();
+                const designId = 'design-1';
+
+                // Seed the cache with existing versions
+                queryClient.setQueryData(queryKeys.designVersions.list(designId), []);
+
+                const { result } = renderHook(() => useCreateVersionMutation(designId), { wrapper });
+
+                await act(async () => {
+                    result.current.mutate({
+                        version_name: 'Test Version',
+                        notes: 'Test notes',
+                    });
+                });
+
+                // Verify optimistic update
+                await waitFor(() => {
+                    const versions = queryClient.getQueryData<any[]>(queryKeys.designVersions.list(designId));
+                    expect(versions).toHaveLength(1);
+                    expect(versions![0].version_name).toBe('Test Version');
+                });
+
+                await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+                expect(useDesignCanvasStore.getState().syncState).toBe('synced');
+                expect(toast.success).toHaveBeenCalledWith('Version saved successfully');
+            });
+
+            it('should handle error and rollback optimistic update', async () => {
+                const { queryClient, wrapper } = createWrapper();
+                const designId = 'error-design';
+
+                server.use(
+                    http.post('*/api/site-designs/:id/versions', async () => {
+                        await new Promise(r => setTimeout(r, 20));
+                        return new HttpResponse(null, { status: 500 });
+                    })
+                );
+
+                const existingVersions = [{ id: 'v1', version_name: 'Existing' }];
+                queryClient.setQueryData(queryKeys.designVersions.list(designId), existingVersions);
+
+                const { result } = renderHook(() => useCreateVersionMutation(designId), { wrapper });
+
+                await act(async () => {
+                    result.current.mutate({ version_name: 'Failed Version' });
+                });
+
+                await waitFor(() => expect(result.current.isError).toBe(true));
+
+                // Verify rollback
+                const versions = queryClient.getQueryData<any[]>(queryKeys.designVersions.list(designId));
+                expect(versions).toEqual(existingVersions);
+                expect(useDesignCanvasStore.getState().syncState).toBe('failed');
+                expect(toast.error).toHaveBeenCalled();
+            });
+
+            it('should retry on failure with exponential backoff', async () => {
+                vi.useFakeTimers();
+                const { wrapper } = createWrapper();
+                const designId = 'design-retry-version';
+
+                let callCount = 0;
+                server.use(
+                    http.post('*/api/site-designs/:id/versions', async () => {
+                        callCount++;
+                        if (callCount <= 2) {
+                            return new HttpResponse(null, { status: 500 });
+                        }
+                        return HttpResponse.json({
+                            id: 'version-success',
+                            version_name: 'Retry Success',
+                            site_design_id: designId,
+                            notes: null,
+                            created_at: new Date().toISOString(),
+                            created_by_name: 'Test',
+                            total_modules: 80,
+                            system_size_kwp: 44.0,
+                        });
+                    })
+                );
+
+                const { result } = renderHook(() => useCreateVersionMutation(designId), { wrapper });
+
+                act(() => {
+                    result.current.mutate({ version_name: 'Retry Success' });
+                });
+
+                // Wait for retries
+                await waitFor(() => expect(useDesignCanvasStore.getState().retryCount).toBe(1));
+                act(() => { vi.advanceTimersByTime(1100); });
+
+                await waitFor(() => expect(useDesignCanvasStore.getState().retryCount).toBe(2));
+                act(() => { vi.advanceTimersByTime(2100); });
+
+                await waitFor(() => expect(useDesignCanvasStore.getState().syncState).toBe('synced'));
+
+                expect(callCount).toBe(3);
+                expect(toast.success).toHaveBeenCalledWith('Version saved successfully');
+            });
+        });
+
+        describe('useVersionsQuery', () => {
+            it('should fetch versions list', async () => {
+                const { wrapper } = createWrapper();
+                const designId = 'design-1';
+
+                const { result } = renderHook(() => useVersionsQuery(designId), { wrapper });
+
+                await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+                expect(result.current.data).toBeDefined();
+                expect(result.current.data!.length).toBeGreaterThan(0);
+                expect(result.current.data![0]).toHaveProperty('version_name');
+            });
+
+            it('should return empty array when no versions exist', async () => {
+                const { wrapper } = createWrapper();
+                const designId = 'no-versions';
+
+                const { result } = renderHook(() => useVersionsQuery(designId), { wrapper });
+
+                await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+                expect(result.current.data).toEqual([]);
+            });
+
+            it('should handle fetch error', async () => {
+                const { wrapper } = createWrapper();
+                const designId = 'error-versions';
+
+                const { result } = renderHook(() => useVersionsQuery(designId), { wrapper });
+
+                await waitFor(() => expect(result.current.isError).toBe(true));
+
+                expect(result.current.error).toBeDefined();
+            });
+
+            it('should not fetch when designId is empty', () => {
+                const { wrapper } = createWrapper();
+
+                const { result } = renderHook(() => useVersionsQuery(''), { wrapper });
+
+                expect(result.current.isFetching).toBe(false);
+            });
+        });
+
+        describe('useVersionDetailQuery', () => {
+            it('should fetch version detail with snapshot data', async () => {
+                const { wrapper } = createWrapper();
+                const designId = 'design-1';
+                const versionId = 'version-1';
+
+                const { result } = renderHook(() => useVersionDetailQuery(designId, versionId), { wrapper });
+
+                await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+                expect(result.current.data).toBeDefined();
+                expect(result.current.data).toHaveProperty('snapshot_data');
+                expect(result.current.data!.snapshot_data).toHaveProperty('site_boundary');
+            });
+
+            it('should handle not found error', async () => {
+                const { wrapper } = createWrapper();
+                const designId = 'design-1';
+                const versionId = 'not-found';
+
+                const { result } = renderHook(() => useVersionDetailQuery(designId, versionId), { wrapper });
+
+                await waitFor(() => expect(result.current.isError).toBe(true));
+            });
+
+            it('should not fetch when IDs are empty', () => {
+                const { wrapper } = createWrapper();
+
+                const { result } = renderHook(() => useVersionDetailQuery('', ''), { wrapper });
+
+                expect(result.current.isFetching).toBe(false);
+            });
+        });
+
+        describe('useRestoreVersionMutation', () => {
+            it('should successfully restore version and invalidate caches', async () => {
+                const { queryClient, wrapper } = createWrapper();
+                const designId = 'design-1';
+                const versionId = 'version-1';
+
+                // Seed caches
+                queryClient.setQueryData(queryKeys.siteDesigns.detail(designId), mockSiteDesign);
+
+                const { result } = renderHook(() => useRestoreVersionMutation(designId), { wrapper });
+
+                await act(async () => {
+                    result.current.mutate(versionId);
+                });
+
+                await waitFor(() => expect(useDesignCanvasStore.getState().syncState).toBe('syncing'));
+                await waitFor(() => expect(useDesignCanvasStore.getState().placementLoading).toBe(true));
+
+                await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+                expect(useDesignCanvasStore.getState().syncState).toBe('synced');
+                expect(useDesignCanvasStore.getState().placementLoading).toBe(false);
+
+                // Verify cache updates
+                const updatedDesign = queryClient.getQueryData(queryKeys.siteDesigns.detail(designId));
+                expect(updatedDesign).toBeDefined();
+            });
+
+            it('should retry on failure', async () => {
+                vi.useFakeTimers();
+                const { wrapper } = createWrapper();
+                const designId = 'restore-fail';
+
+                let callCount = 0;
+                server.use(
+                    http.post('*/api/site-designs/:designId/restore/:versionId', async () => {
+                        callCount++;
+                        if (callCount <= 2) {
+                            return new HttpResponse(null, { status: 500 });
+                        }
+                        return HttpResponse.json(mockVersionRestoreResponse);
+                    })
+                );
+
+                const { result } = renderHook(() => useRestoreVersionMutation(designId), { wrapper });
+
+                act(() => {
+                    result.current.mutate('version-1');
+                });
+
+                await waitFor(() => expect(useDesignCanvasStore.getState().retryCount).toBe(1));
+                act(() => { vi.advanceTimersByTime(1100); });
+
+                await waitFor(() => expect(useDesignCanvasStore.getState().retryCount).toBe(2));
+                act(() => { vi.advanceTimersByTime(2100); });
+
+                await waitFor(() => expect(useDesignCanvasStore.getState().syncState).toBe('synced'));
+
+                expect(callCount).toBe(3);
+            });
+
+            it('should handle final failure after retries', async () => {
+                vi.useFakeTimers();
+                const { wrapper } = createWrapper();
+                const designId = 'restore-fail-final';
+
+                server.use(
+                    http.post('*/api/site-designs/:designId/restore/:versionId', () => {
+                        return new HttpResponse(null, { status: 500 });
+                    })
+                );
+
+                const { result } = renderHook(() => useRestoreVersionMutation(designId), { wrapper });
+
+                act(() => {
+                    result.current.mutate('version-1');
+                });
+
+                // Advance through all retries
+                await waitFor(() => expect(useDesignCanvasStore.getState().retryCount).toBe(1));
+                act(() => { vi.advanceTimersByTime(1100); });
+
+                await waitFor(() => expect(useDesignCanvasStore.getState().retryCount).toBe(2));
+                act(() => { vi.advanceTimersByTime(2100); });
+
+                await waitFor(() => expect(useDesignCanvasStore.getState().retryCount).toBe(3));
+                act(() => { vi.advanceTimersByTime(4100); });
+
+                await waitFor(() => expect(useDesignCanvasStore.getState().syncState).toBe('failed'));
+
+                expect(toast.error).toHaveBeenCalled();
+                expect(useDesignCanvasStore.getState().placementLoading).toBe(false);
+            });
+
+            it('should invalidate related queries on success', async () => {
+                const { queryClient, wrapper } = createWrapper();
+                const designId = 'design-1';
+
+                const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+
+                const { result } = renderHook(() => useRestoreVersionMutation(designId), { wrapper });
+
+                await act(async () => {
+                    result.current.mutate('version-1');
+                });
+
+                await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+                // Verify all related queries are invalidated
+                expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: queryKeys.siteDesigns.lists() });
+                expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: queryKeys.energyEstimation.detail(designId) });
+                expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: queryKeys.financialAnalysis.detail(designId) });
+                expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: queryKeys.siteDesigns.detail(designId) });
+            });
+        });
+    });
+});

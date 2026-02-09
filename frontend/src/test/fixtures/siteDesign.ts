@@ -116,3 +116,5 @@ export const mockSiteDesignWithPendingSync: SiteDesignResponse = {
     id: "design-pending",
     updated_at: new Date(Date.now() - 1000 * 60).toISOString(), // 1 minute ago
 };
+
+export { mockVersionResponse, mockVersionsList, mockVersionDetail, mockVersionRestoreResponse, createMockVersion } from './designVersion';
