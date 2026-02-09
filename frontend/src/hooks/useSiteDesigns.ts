@@ -3,7 +3,7 @@ import { siteDesignsApi, pvDesignsApi } from "@/lib/api";
 import { queryKeys } from "@/lib/queryKeys";
 import { SiteDesignCreate, SiteDesignUpdate, SiteDesignResponse, EnergyEstimateResponse, FinancialAnalysisResponse } from "@/types";
 import { useDesignCanvasStore } from "@/stores/useDesignCanvasStore";
-import { toast } from "sonner"; // Fixed import: 'sonner' instead of '@/lib/toast' based on project check, but 'lib/toast' might be a wrapper. Checked previous files: toast.ts exports from sonner. Keep as is if it works or use sonner directly. Previous files used '@/lib/toast'. I'll stick to @/lib/toast if it exists or check. Wait, previous file content showed '@/lib/toast'.
+import { toast } from "@/lib/toast";
 
 export function useSiteDesignsQuery(tenderId: string) {
     return useQuery({
@@ -24,13 +24,20 @@ export function useSiteDesignQuery(designId: string) {
 export function useCreateSiteDesignMutation(tenderId: string) {
     const queryClient = useQueryClient();
     const setSyncState = useDesignCanvasStore((state) => state.setSyncState);
+    const setRetryCount = useDesignCanvasStore((state) => state.setRetryCount);
 
     return useMutation({
         mutationFn: (data: SiteDesignCreate) => {
             setSyncState('syncing');
+            setRetryCount(0);
             return siteDesignsApi.create(tenderId, data);
         },
         retry: process.env.NODE_ENV === 'test' ? 0 : 3,
+        retryDelay: (attemptIndex) => {
+            const delays = [1000, 2000, 4000];
+            setRetryCount(attemptIndex + 1);
+            return delays[attemptIndex] || 4000;
+        },
         onSuccess: () => {
             setSyncState('synced');
             queryClient.invalidateQueries({ queryKey: queryKeys.siteDesigns.lists() });
@@ -47,14 +54,22 @@ export function useCreateSiteDesignMutation(tenderId: string) {
 export function useUpdateSiteDesignMutation(designId: string) {
     const queryClient = useQueryClient();
     const setSyncState = useDesignCanvasStore((state) => state.setSyncState);
+    const setRetryCount = useDesignCanvasStore((state) => state.setRetryCount);
 
     return useMutation({
         mutationFn: (data: SiteDesignUpdate) => {
             setSyncState('syncing');
+            // Reset is handled in onMutate below
             return siteDesignsApi.update(designId, data);
         },
         retry: process.env.NODE_ENV === 'test' ? 0 : 3,
+        retryDelay: (attemptIndex) => {
+            const delays = [1000, 2000, 4000];
+            setRetryCount(attemptIndex + 1);
+            return delays[attemptIndex] || 4000;
+        },
         onMutate: async (newData) => {
+            setRetryCount(0);
             // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
             await queryClient.cancelQueries({ queryKey: queryKeys.siteDesigns.detail(designId) });
 
@@ -100,13 +115,20 @@ export function useUpdateSiteDesignMutation(designId: string) {
 export function useDeleteSiteDesignMutation(tenderId: string) {
     const queryClient = useQueryClient();
     const setSyncState = useDesignCanvasStore((state) => state.setSyncState);
+    const setRetryCount = useDesignCanvasStore((state) => state.setRetryCount);
 
     return useMutation({
         mutationFn: (designId: string) => {
             setSyncState('syncing');
+            setRetryCount(0);
             return siteDesignsApi.delete(designId);
         },
         retry: process.env.NODE_ENV === 'test' ? 0 : 3,
+        retryDelay: (attemptIndex) => {
+            const delays = [1000, 2000, 4000];
+            setRetryCount(attemptIndex + 1);
+            return delays[attemptIndex] || 4000;
+        },
         onSuccess: () => {
             setSyncState('synced');
             queryClient.invalidateQueries({ queryKey: queryKeys.siteDesigns.lists() });

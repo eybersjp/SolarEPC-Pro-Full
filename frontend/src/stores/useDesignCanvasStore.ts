@@ -12,6 +12,8 @@ interface DesignCanvasState {
     hasEquipmentSelected: boolean;
     equipmentModuleId: string | null;
     equipmentInverterId: string | null;
+    retryCount: number;
+    lastSyncedAt: Date | null;
 
     // Actions
     setMode: (mode: 'select' | 'draw' | 'edit') => void;
@@ -24,6 +26,9 @@ interface DesignCanvasState {
     setPlacementSettings: (settings: Partial<PlacementSettings>) => void;
     setEquipmentSelection: (moduleId: string | null, inverterId: string | null) => void;
     clearEquipmentSelection: () => void;
+    setRetryCount: (count: number) => void;
+    setLastSyncedAt: (timestamp: Date) => void;
+    resetRetryCount: () => void;
 }
 
 export const useDesignCanvasStore = create<DesignCanvasState>((set) => ({
@@ -37,6 +42,8 @@ export const useDesignCanvasStore = create<DesignCanvasState>((set) => ({
     hasEquipmentSelected: false,
     equipmentModuleId: null,
     equipmentInverterId: null,
+    retryCount: 0,
+    lastSyncedAt: null,
 
     setMode: (mode) => set({
         mode,
@@ -45,7 +52,11 @@ export const useDesignCanvasStore = create<DesignCanvasState>((set) => ({
     }),
     setSelectedTool: (selectedTool) => set({ selectedTool }),
     setSelectedGeometry: (selectedGeometry) => set({ selectedGeometry }),
-    setSyncState: (syncState) => set({ syncState }),
+    setSyncState: (syncState) => set((state) => ({
+        syncState,
+        retryCount: syncState === 'synced' ? 0 : state.retryCount,
+        lastSyncedAt: syncState === 'synced' ? new Date() : state.lastSyncedAt
+    })),
     setPlacementLoading: (placementLoading) => set({ placementLoading }),
     setRightPanelOpen: (rightPanelOpen) => set({ rightPanelOpen }),
     toggleRightPanel: () => set((state) => ({ rightPanelOpen: !state.rightPanelOpen })),
@@ -78,4 +89,7 @@ export const useDesignCanvasStore = create<DesignCanvasState>((set) => ({
             selectedTool: shouldResetMode ? null : state.selectedTool
         };
     }),
+    setRetryCount: (retryCount) => set({ retryCount }),
+    setLastSyncedAt: (lastSyncedAt) => set({ lastSyncedAt }),
+    resetRetryCount: () => set({ retryCount: 0 }),
 }));

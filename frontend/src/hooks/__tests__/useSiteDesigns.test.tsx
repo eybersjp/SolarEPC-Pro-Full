@@ -38,7 +38,11 @@ const createWrapper = () => {
 describe('useSiteDesigns hooks', () => {
     beforeEach(() => {
         vi.clearAllMocks()
-        useDesignCanvasStore.setState({ syncState: 'synced' })
+        useDesignCanvasStore.setState({
+            syncState: 'synced',
+            retryCount: 0,
+            lastSyncedAt: null
+        })
         // Add a small delay to all design API calls to ensure 'syncing' state is observable
         server.use(
             http.post('*/api/tenders/:id/site-designs', async ({ request }) => {
@@ -56,6 +60,11 @@ describe('useSiteDesigns hooks', () => {
                 return HttpResponse.json({ message: 'Deleted' })
             })
         )
+    })
+
+    afterEach(() => {
+        vi.useRealTimers()
+        vi.unstubAllEnvs()
     })
 
     describe('useUpdateSiteDesignMutation', () => {
@@ -128,6 +137,47 @@ describe('useSiteDesigns hooks', () => {
             expect(useDesignCanvasStore.getState().syncState).toBe('failed')
             expect(toast.error).toHaveBeenCalled()
         })
+
+        it('should retry with exponential backoff on failure', async () => {
+            // Using real timers to avoid coordination issues with MSW and TanStack Query v5
+            vi.stubEnv('NODE_ENV', 'development')
+
+            const { wrapper } = createWrapper()
+            const designId = 'design-retry-test'
+
+            let callCount = 0
+            server.use(
+                http.put('*/api/site-designs/:id', async () => {
+                    callCount++
+                    if (callCount <= 2) {
+                        return new HttpResponse(null, { status: 500 })
+                    }
+                    return HttpResponse.json({ ...mockSiteDesign, name: 'Retry Success', id: designId })
+                })
+            )
+
+            const { result } = renderHook(() => useUpdateSiteDesignMutation(designId), { wrapper })
+
+            // Trigger mutation
+            act(() => {
+                result.current.mutate({ name: 'Retry Success' })
+            })
+
+            // 1. First attempt fails immediately. retryDelay is called.
+            // Wait for retryCount to reach 1 (after first failure, before first retry)
+            await waitFor(() => expect(useDesignCanvasStore.getState().retryCount).toBe(1), { timeout: 2000 })
+
+            // 2. Wait for first retry (1s delay)
+            // The second attempt will fail and set retryCount to 2
+            await waitFor(() => expect(useDesignCanvasStore.getState().retryCount).toBe(2), { timeout: 3000 })
+
+            // 3. Wait for second retry (2s delay)
+            // The third attempt will succeed
+            await waitFor(() => expect(useDesignCanvasStore.getState().syncState).toBe('synced'), { timeout: 5000 })
+
+            expect(useDesignCanvasStore.getState().retryCount).toBe(0)
+            expect(result.current.isSuccess).toBe(true)
+        }, 15000)
     })
 
     describe('useCreateSiteDesignMutation', () => {

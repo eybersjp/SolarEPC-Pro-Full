@@ -11,6 +11,8 @@ describe('useDesignCanvasStore', () => {
             syncState: 'synced',
             placementLoading: false,
             rightPanelOpen: true,
+            retryCount: 0,
+            lastSyncedAt: null,
         })
     })
 
@@ -113,6 +115,57 @@ describe('useDesignCanvasStore', () => {
             const state = useDesignCanvasStore.getState()
 
             expect(state.mode).toBe('select')
+        })
+    })
+
+    describe('retry logic', () => {
+        it('should initialize retryCount and lastSyncedAt', () => {
+            const state = useDesignCanvasStore.getState()
+            expect(state.retryCount).toBe(0)
+            expect(state.lastSyncedAt).toBeNull()
+        })
+
+        it('should update retryCount', () => {
+            useDesignCanvasStore.getState().setRetryCount(2)
+            expect(useDesignCanvasStore.getState().retryCount).toBe(2)
+        })
+
+        it('should reset retryCount', () => {
+            useDesignCanvasStore.getState().setRetryCount(3)
+            useDesignCanvasStore.getState().resetRetryCount()
+            expect(useDesignCanvasStore.getState().retryCount).toBe(0)
+        })
+
+        it('should update lastSyncedAt', () => {
+            const now = new Date()
+            useDesignCanvasStore.getState().setLastSyncedAt(now)
+            expect(useDesignCanvasStore.getState().lastSyncedAt).toEqual(now)
+        })
+
+        it('should reset retryCount and update lastSyncedAt when syncState becomes synced', () => {
+            // Set initial state
+            useDesignCanvasStore.setState({ retryCount: 3, lastSyncedAt: null })
+
+            // Transition to synced
+            useDesignCanvasStore.getState().setSyncState('synced')
+
+            const state = useDesignCanvasStore.getState()
+            expect(state.syncState).toBe('synced')
+            expect(state.retryCount).toBe(0)
+            expect(state.lastSyncedAt).toBeInstanceOf(Date)
+        })
+
+        it('should NOT reset retryCount when syncState becomes other than synced', () => {
+            // Set initial state
+            useDesignCanvasStore.setState({ retryCount: 2 })
+
+            // Transition to syncing
+            useDesignCanvasStore.getState().setSyncState('syncing')
+            expect(useDesignCanvasStore.getState().retryCount).toBe(2)
+
+            // Transition to failed
+            useDesignCanvasStore.getState().setSyncState('failed')
+            expect(useDesignCanvasStore.getState().retryCount).toBe(2)
         })
     })
 })
