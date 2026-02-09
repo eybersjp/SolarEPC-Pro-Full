@@ -338,6 +338,7 @@ export interface DesignVersionResponse {
     version_name: string;
     notes: string | null;
     created_at: string;
+    created_by_name: string | null;
     total_modules: number | null;
     system_size_kwp: number | null;
 }

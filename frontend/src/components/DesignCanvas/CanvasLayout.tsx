@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { ReactNode, useState, useEffect } from "react";
 import { Toolbar } from "./Toolbar";
 import { FloatingPalette } from "./FloatingPalette";
 import { RightPanel } from "./RightPanel";
@@ -15,6 +15,20 @@ interface CanvasLayoutProps {
 
 export function CanvasLayout({ children, title, tenderId, designId }: CanvasLayoutProps) {
     const rightPanelOpen = useDesignCanvasStore((state) => state.rightPanelOpen);
+    const [isVersionListOpen, setIsVersionListOpen] = useState(false);
+
+    // Keyboard shortcut to toggle version list (Ctrl+H or Cmd+H)
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'h') {
+                e.preventDefault();
+                setIsVersionListOpen(prev => !prev);
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
 
     return (
         <div className="flex flex-col h-screen w-screen overflow-hidden bg-slate-50">
@@ -22,6 +36,8 @@ export function CanvasLayout({ children, title, tenderId, designId }: CanvasLayo
                 title={title}
                 tenderId={tenderId}
                 designId={designId}
+                isVersionListOpen={isVersionListOpen}
+                onVersionListOpenChange={setIsVersionListOpen}
             />
 
             <div className="flex-1 flex overflow-hidden relative">
@@ -34,7 +50,11 @@ export function CanvasLayout({ children, title, tenderId, designId }: CanvasLayo
                 </div>
 
                 {/* Right Panel */}
-                <RightPanel designId={designId} />
+                <RightPanel
+                    designId={designId}
+                    isVersionListOpen={isVersionListOpen}
+                    onVersionListOpenChange={setIsVersionListOpen}
+                />
             </div>
         </div>
     );

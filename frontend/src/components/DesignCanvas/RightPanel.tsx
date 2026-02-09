@@ -1,16 +1,23 @@
 import { Button } from "@/components/ui/button";
-import { ChevronRight, ChevronLeft, Settings, Wrench } from "lucide-react";
+import { ChevronRight, ChevronLeft, Settings, Wrench, History as HistoryIcon } from "lucide-react";
 import { useDesignCanvasStore } from "@/stores/useDesignCanvasStore";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { EquipmentSelector } from "./EquipmentSelector";
 import { PlacementSettings } from "./PlacementSettings";
+import { VersionList } from "./VersionList";
 
 interface RightPanelProps {
     designId: string;
+    isVersionListOpen: boolean;
+    onVersionListOpenChange: (open: boolean) => void;
 }
 
-export function RightPanel({ designId }: RightPanelProps) {
-    const { rightPanelOpen, toggleRightPanel } = useDesignCanvasStore();
+export function RightPanel({ designId, isVersionListOpen, onVersionListOpenChange }: RightPanelProps) {
+    const { rightPanelOpen, toggleRightPanel, setCurrentVersionName } = useDesignCanvasStore();
+
+    const handleVersionRestored = (versionName: string) => {
+        setCurrentVersionName(versionName);
+    };
 
     if (!rightPanelOpen) {
         return (
@@ -57,6 +64,24 @@ export function RightPanel({ designId }: RightPanelProps) {
                     </CardHeader>
                     <CardContent className="p-4 pt-0">
                         <PlacementSettings designId={designId} />
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader className="p-4 flex flex-row items-center gap-2 space-y-0">
+                        <HistoryIcon className="h-4 w-4" />
+                        <CardTitle className="text-sm font-medium">Version History</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-4 pt-0">
+                        <p className="text-xs text-muted-foreground mb-3">
+                            View and restore previous design snapshots.
+                        </p>
+                        <VersionList
+                            designId={designId}
+                            open={isVersionListOpen}
+                            onOpenChange={onVersionListOpenChange}
+                            onVersionRestored={handleVersionRestored}
+                        />
                     </CardContent>
                 </Card>
             </div>

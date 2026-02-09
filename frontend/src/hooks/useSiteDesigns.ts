@@ -264,6 +264,7 @@ export function useCreateVersionMutation(designId: string) {
                     version_name: newVersion.version_name,
                     notes: newVersion.notes || null,
                     created_at: new Date().toISOString(),
+                    created_by_name: "You", // Optimistic placeholder
                     total_modules: null,
                     system_size_kwp: null,
                 };
@@ -334,7 +335,6 @@ export function useRestoreVersionMutation(designId: string) {
             queryClient.invalidateQueries({ queryKey: queryKeys.siteDesigns.lists() });
             queryClient.invalidateQueries({ queryKey: queryKeys.energyEstimation.detail(designId) });
             queryClient.invalidateQueries({ queryKey: queryKeys.financialAnalysis.detail(designId) });
-            toast.success("Version restored successfully. Recalculating...");
         },
         onError: (error: Error) => {
             setSyncState('failed');

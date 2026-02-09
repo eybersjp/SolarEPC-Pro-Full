@@ -28,6 +28,8 @@ describe('Toolbar', () => {
         title: 'Test Design',
         tenderId: 'tender-1',
         designId: 'design-1',
+        isVersionListOpen: false,
+        onVersionListOpenChange: vi.fn(),
     };
 
     beforeEach(() => {

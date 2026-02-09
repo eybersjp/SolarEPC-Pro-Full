@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useDesignCanvasStore } from "@/stores/useDesignCanvasStore";
 import { ProposalWizard } from "./ProposalWizard";
 import { SaveVersionModal } from "./SaveVersionModal";
+import { VersionList } from "./VersionList";
 import { useState, useEffect } from "react";
 import { formatRelativeTime, cn } from "@/lib/utils";
 import { useUpdateSiteDesignMutation } from "@/hooks/useSiteDesigns";
@@ -21,9 +22,11 @@ interface ToolbarProps {
     tenderId: string;
     designId: string;
     title: string;
+    isVersionListOpen: boolean;
+    onVersionListOpenChange: (open: boolean) => void;
 }
 
-export function Toolbar({ tenderId, designId, title }: ToolbarProps) {
+export function Toolbar({ tenderId, designId, title, isVersionListOpen, onVersionListOpenChange }: ToolbarProps) {
     const { back } = useDesignNavigation();
     const { syncState, lastSyncedAt, retryCount, lastMutationData, currentVersionName, setCurrentVersionName, isModifiedSinceVersion } = useDesignCanvasStore((state) => ({
         syncState: state.syncState,
@@ -65,6 +68,10 @@ export function Toolbar({ tenderId, designId, title }: ToolbarProps) {
     };
 
     const handleVersionSaved = (versionName: string) => {
+        setCurrentVersionName(versionName);
+    };
+
+    const handleVersionRestored = (versionName: string) => {
         setCurrentVersionName(versionName);
     };
 
@@ -140,14 +147,25 @@ export function Toolbar({ tenderId, designId, title }: ToolbarProps) {
                 )}
 
                 <div className="flex items-center gap-2">
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setIsVersionModalOpen(true)}
-                    >
-                        <History className="h-4 w-4 mr-2" />
-                        Save as Version
-                    </Button>
+                    <div className="flex items-center">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className="rounded-r-none border-r-0"
+                            onClick={() => setIsVersionModalOpen(true)}
+                        >
+                            <History className="h-4 w-4 mr-2" />
+                            Save as Version
+                        </Button>
+                        <div className="h-9">
+                            <VersionList
+                                designId={designId}
+                                open={isVersionListOpen}
+                                onOpenChange={onVersionListOpenChange}
+                                onVersionRestored={handleVersionRestored}
+                            />
+                        </div>
+                    </div>
 
                     <Button variant="default" size="sm" onClick={() => setIsWizardOpen(true)}>
                         <FileText className="h-4 w-4 mr-2" />

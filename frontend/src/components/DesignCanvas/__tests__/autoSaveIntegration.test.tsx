@@ -51,7 +51,13 @@ describe('Auto-save Integration', () => {
 
         renderWithProviders(
             <>
-                <Toolbar title="Integration Test" tenderId="tender-1" designId={designId} />
+                <Toolbar
+                    title="Integration Test"
+                    tenderId="tender-1"
+                    designId={designId}
+                    isVersionListOpen={false}
+                    onVersionListOpenChange={vi.fn()}
+                />
                 <PlacementSettings designId={designId} />
             </>
         );
@@ -105,7 +111,13 @@ describe('Auto-save Integration', () => {
 
         renderWithProviders(
             <>
-                <Toolbar title="Integration Test" tenderId="tender-1" designId={designId} />
+                <Toolbar
+                    title="Integration Test"
+                    tenderId="tender-1"
+                    designId={designId}
+                    isVersionListOpen={false}
+                    onVersionListOpenChange={vi.fn()}
+                />
                 <PlacementSettings designId={designId} />
             </>
         );
