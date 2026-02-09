@@ -34,6 +34,10 @@ import type {
     ProposalGenerateRequest,
     ProposalTaskResponse,
     ProposalStatusResponse,
+    DesignVersionCreate,
+    DesignVersionResponse,
+    DesignVersionDetail,
+    DesignVersionRestoreResponse,
 } from "@/types";
 
 export class ApiError extends Error {
@@ -303,6 +307,23 @@ export const siteDesignsApi = {
 
     getFinancialAnalysis: (designId: string) =>
         fetchApi<FinancialAnalysisResponse>(`/site-designs/${designId}/financial-analysis`),
+
+    createVersion: (designId: string, data: DesignVersionCreate) =>
+        fetchApi<DesignVersionResponse>(`/site-designs/${designId}/versions`, {
+            method: "POST",
+            body: data,
+        }),
+
+    listVersions: (designId: string) =>
+        fetchApi<DesignVersionResponse[]>(`/site-designs/${designId}/versions`),
+
+    getVersionDetail: (designId: string, versionId: string) =>
+        fetchApi<DesignVersionDetail>(`/site-designs/${designId}/versions/${versionId}`),
+
+    restoreVersion: (designId: string, versionId: string) =>
+        fetchApi<DesignVersionRestoreResponse>(`/site-designs/${designId}/restore/${versionId}`, {
+            method: "POST",
+        }),
 };
 
 // Equipment API

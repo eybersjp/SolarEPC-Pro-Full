@@ -99,4 +99,15 @@ export const queryKeys = {
         tasks: () => [...queryKeys.proposals.all, "task"] as const,
         task: (taskId: string) => [...queryKeys.proposals.tasks(), taskId] as const,
     },
+
+    // Design Version queries
+    designVersions: {
+        all: ["design-versions"] as const,
+        lists: () => [...queryKeys.designVersions.all, "list"] as const,
+        list: (designId: string) =>
+            [...queryKeys.designVersions.lists(), designId] as const,
+        details: () => [...queryKeys.designVersions.all, "detail"] as const,
+        detail: (designId: string, versionId: string) =>
+            [...queryKeys.designVersions.details(), designId, versionId] as const,
+    },
 } as const;

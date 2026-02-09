@@ -324,6 +324,30 @@ export interface SiteDesignResponse extends SiteDesignBase {
     created_at: string;
     updated_at: string;
 }
+
+export interface DesignVersionCreate {
+    version_name: string;
+    notes?: string;
+}
+
+export interface DesignVersionResponse {
+    id: string;
+    site_design_id: string;
+    version_name: string;
+    notes: string | null;
+    created_at: string;
+    total_modules: number | null;
+    system_size_kwp: number | null;
+}
+
+export interface DesignVersionDetail extends DesignVersionResponse {
+    snapshot_data: Record<string, any>;
+}
+
+export interface DesignVersionRestoreResponse {
+    site_design: SiteDesignResponse;
+    recalculation_status: Record<string, any>;
+}
 // Equipment Types
 export interface EquipmentModule {
     id: string;
