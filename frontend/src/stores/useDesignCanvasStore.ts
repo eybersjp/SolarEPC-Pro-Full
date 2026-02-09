@@ -15,6 +15,8 @@ interface DesignCanvasState {
     retryCount: number;
     lastSyncedAt: Date | null;
     lastMutationData: Partial<SiteDesignUpdate> | null;
+    currentVersionName: string | null;
+    isModifiedSinceVersion: boolean;
 
     // Actions
     setMode: (mode: 'select' | 'draw' | 'edit') => void;
@@ -31,6 +33,8 @@ interface DesignCanvasState {
     setLastSyncedAt: (timestamp: Date) => void;
     resetRetryCount: () => void;
     setLastMutationData: (data: Partial<SiteDesignUpdate> | null) => void;
+    setCurrentVersionName: (name: string | null) => void;
+    setIsModifiedSinceVersion: (isModified: boolean) => void;
 }
 
 export const useDesignCanvasStore = create<DesignCanvasState>((set) => ({
@@ -47,6 +51,8 @@ export const useDesignCanvasStore = create<DesignCanvasState>((set) => ({
     retryCount: 0,
     lastSyncedAt: null,
     lastMutationData: null,
+    currentVersionName: null,
+    isModifiedSinceVersion: false,
 
     setMode: (mode) => set({
         mode,
@@ -64,7 +70,8 @@ export const useDesignCanvasStore = create<DesignCanvasState>((set) => ({
     setRightPanelOpen: (rightPanelOpen) => set({ rightPanelOpen }),
     toggleRightPanel: () => set((state) => ({ rightPanelOpen: !state.rightPanelOpen })),
     setPlacementSettings: (placementSettings) => set((state) => ({
-        placementSettings: { ...state.placementSettings, ...placementSettings }
+        placementSettings: { ...state.placementSettings, ...placementSettings },
+        isModifiedSinceVersion: true
     })),
     setEquipmentSelection: (moduleId, inverterId) => set((state) => {
         const hasSelected = !!moduleId && !!inverterId;
@@ -77,7 +84,8 @@ export const useDesignCanvasStore = create<DesignCanvasState>((set) => ({
             equipmentInverterId: inverterId,
             hasEquipmentSelected: hasSelected,
             mode: shouldResetMode ? 'select' : state.mode,
-            selectedTool: shouldResetMode ? null : state.selectedTool
+            selectedTool: shouldResetMode ? null : state.selectedTool,
+            isModifiedSinceVersion: true
         };
     }),
     clearEquipmentSelection: () => set((state) => {
@@ -89,11 +97,17 @@ export const useDesignCanvasStore = create<DesignCanvasState>((set) => ({
             equipmentModuleId: null,
             equipmentInverterId: null,
             mode: shouldResetMode ? 'select' : state.mode,
-            selectedTool: shouldResetMode ? null : state.selectedTool
+            selectedTool: shouldResetMode ? null : state.selectedTool,
+            isModifiedSinceVersion: true
         };
     }),
     setRetryCount: (retryCount) => set({ retryCount }),
     setLastSyncedAt: (lastSyncedAt) => set({ lastSyncedAt }),
     resetRetryCount: () => set({ retryCount: 0 }),
     setLastMutationData: (lastMutationData) => set({ lastMutationData }),
+    setCurrentVersionName: (currentVersionName) => set({
+        currentVersionName,
+        isModifiedSinceVersion: false // Reset modification flag when a new version context is set
+    }),
+    setIsModifiedSinceVersion: (isModifiedSinceVersion) => set({ isModifiedSinceVersion }),
 }));

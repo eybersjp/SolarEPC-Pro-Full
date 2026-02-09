@@ -36,6 +36,8 @@ export const mockSiteDesign: SiteDesignResponse = {
     placement_task_status: null,
     placement_task_error: null,
     placement_calculated_at: null,
+    version_id: null,
+    version_name: null,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
 };

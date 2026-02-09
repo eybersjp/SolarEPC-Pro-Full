@@ -39,6 +39,15 @@ export default function DesignCanvasPage() {
     const [isNavigationWarningOpen, setIsNavigationWarningOpen] = useState(false);
     const [pendingNavigation, setPendingNavigation] = useState<(() => void) | null>(null);
 
+    const setCurrentVersionName = useDesignCanvasStore((state) => state.setCurrentVersionName);
+
+    // Sync version context with design data
+    useEffect(() => {
+        if (design) {
+            setCurrentVersionName(design.version_name || null);
+        }
+    }, [designId, design?.version_name, setCurrentVersionName]);
+
     // Browser-native beforeunload handler
     useEffect(() => {
         const hasUnsavedChanges = syncState === 'pending' || syncState === 'failed';

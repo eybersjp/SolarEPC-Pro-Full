@@ -321,6 +321,8 @@ export interface SiteDesignResponse extends SiteDesignBase {
     placement_task_status: string | null;
     placement_task_error: string | null;
     placement_calculated_at: string | null;
+    version_id: string | null;
+    version_name: string | null;
     created_at: string;
     updated_at: string;
 }

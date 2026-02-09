@@ -21,9 +21,10 @@ interface SaveVersionModalProps {
     designId: string;
     open: boolean;
     onOpenChange: (open: boolean) => void;
+    onVersionSaved?: (versionName: string) => void;
 }
 
-export function SaveVersionModal({ designId, open, onOpenChange }: SaveVersionModalProps) {
+export function SaveVersionModal({ designId, open, onOpenChange, onVersionSaved }: SaveVersionModalProps) {
     const [versionName, setVersionName] = useState("");
     const [notes, setNotes] = useState("");
     const [validationError, setValidationError] = useState<string | null>(null);
@@ -64,6 +65,7 @@ export function SaveVersionModal({ designId, open, onOpenChange }: SaveVersionMo
             },
             {
                 onSuccess: () => {
+                    onVersionSaved?.(versionName.trim());
                     onOpenChange(false);
                 },
             }
