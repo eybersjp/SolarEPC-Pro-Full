@@ -1,7 +1,17 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { siteDesignsApi, pvDesignsApi } from "@/lib/api";
 import { queryKeys } from "@/lib/queryKeys";
-import { SiteDesignCreate, SiteDesignUpdate, SiteDesignResponse, EnergyEstimateResponse, FinancialAnalysisResponse } from "@/types";
+import {
+    SiteDesignCreate,
+    SiteDesignUpdate,
+    SiteDesignResponse,
+    EnergyEstimateResponse,
+    FinancialAnalysisResponse,
+    DesignVersionCreate,
+    DesignVersionResponse,
+    DesignVersionDetail,
+    DesignVersionRestoreResponse
+} from "@/types";
 import { useDesignCanvasStore } from "@/stores/useDesignCanvasStore";
 import { toast } from "@/lib/toast";
 
@@ -218,5 +228,121 @@ export function usePVDesignQuery(tenderId: string, pvDesignId: string | null) {
         queryKey: queryKeys.pvDesigns.detail(tenderId, pvDesignId || ''),
         queryFn: () => pvDesignsApi.get(pvDesignId!),
         enabled: !!tenderId && !!pvDesignId,
+    });
+}
+
+export function useCreateVersionMutation(designId: string) {
+    const queryClient = useQueryClient();
+    const setSyncState = useDesignCanvasStore((state) => state.setSyncState);
+    const setRetryCount = useDesignCanvasStore((state) => state.setRetryCount);
+
+    return useMutation({
+        mutationFn: (data: DesignVersionCreate) => {
+            setSyncState('syncing');
+            return siteDesignsApi.createVersion(designId, data);
+        },
+        retry: process.env.NODE_ENV === 'test' ? 0 : 3,
+        retryDelay: (attemptIndex) => {
+            const delays = [1000, 2000, 4000];
+            setRetryCount(attemptIndex + 1);
+            toast.error("Failed to save changes. Retrying...");
+            return delays[attemptIndex] || 4000;
+        },
+        onMutate: async (newVersion) => {
+            setRetryCount(0);
+            // Cancel any outgoing refetches
+            await queryClient.cancelQueries({ queryKey: queryKeys.designVersions.list(designId) });
+
+            // Snapshot the previous value
+            const previousVersions = queryClient.getQueryData<DesignVersionResponse[]>(queryKeys.designVersions.list(designId));
+
+            // Optimistically update to the new value
+            if (previousVersions) {
+                const tempVersion: DesignVersionResponse = {
+                    id: `temp-${Date.now()}`,
+                    site_design_id: designId,
+                    version_name: newVersion.version_name,
+                    notes: newVersion.notes || null,
+                    created_at: new Date().toISOString(),
+                    total_modules: null,
+                    system_size_kwp: null,
+                };
+                queryClient.setQueryData<DesignVersionResponse[]>(queryKeys.designVersions.list(designId), [
+                    tempVersion,
+                    ...previousVersions,
+                ]);
+            }
+
+            return { previousVersions };
+        },
+        onSuccess: () => {
+            setSyncState('synced');
+            toast.success("Version saved successfully");
+        },
+        onError: (error: Error, _variables, context) => {
+            setSyncState('failed');
+            if (context?.previousVersions) {
+                queryClient.setQueryData(queryKeys.designVersions.list(designId), context.previousVersions);
+            }
+            toast.error(error.message || "Failed to save version");
+        },
+        onSettled: () => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.designVersions.list(designId) });
+        },
+    });
+}
+
+export function useVersionsQuery(designId: string) {
+    return useQuery({
+        queryKey: queryKeys.designVersions.list(designId),
+        queryFn: () => siteDesignsApi.listVersions(designId),
+        enabled: !!designId,
+    });
+}
+
+export function useVersionDetailQuery(designId: string, versionId: string) {
+    return useQuery({
+        queryKey: queryKeys.designVersions.detail(designId, versionId),
+        queryFn: () => siteDesignsApi.getVersionDetail(designId, versionId),
+        enabled: !!designId && !!versionId,
+    });
+}
+
+export function useRestoreVersionMutation(designId: string) {
+    const queryClient = useQueryClient();
+    const setSyncState = useDesignCanvasStore((state) => state.setSyncState);
+    const setRetryCount = useDesignCanvasStore((state) => state.setRetryCount);
+    const setPlacementLoading = useDesignCanvasStore((state) => state.setPlacementLoading);
+
+    return useMutation({
+        mutationFn: (versionId: string) => {
+            setSyncState('syncing');
+            setPlacementLoading(true);
+            setRetryCount(0);
+            return siteDesignsApi.restoreVersion(designId, versionId);
+        },
+        retry: process.env.NODE_ENV === 'test' ? 0 : 3,
+        retryDelay: (attemptIndex) => {
+            const delays = [1000, 2000, 4000];
+            setRetryCount(attemptIndex + 1);
+            toast.error("Failed to restore version. Retrying...");
+            return delays[attemptIndex] || 4000;
+        },
+        onSuccess: (data) => {
+            setSyncState('synced');
+            queryClient.setQueryData(queryKeys.siteDesigns.detail(designId), data.site_design);
+            queryClient.invalidateQueries({ queryKey: queryKeys.siteDesigns.lists() });
+            queryClient.invalidateQueries({ queryKey: queryKeys.energyEstimation.detail(designId) });
+            queryClient.invalidateQueries({ queryKey: queryKeys.financialAnalysis.detail(designId) });
+            toast.success("Version restored successfully. Recalculating...");
+        },
+        onError: (error: Error) => {
+            setSyncState('failed');
+            toast.error(error.message || "Failed to restore version");
+        },
+        onSettled: () => {
+            setPlacementLoading(false);
+            queryClient.invalidateQueries({ queryKey: queryKeys.siteDesigns.detail(designId) });
+        },
     });
 }
