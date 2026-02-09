@@ -394,6 +394,7 @@ export interface FinancialAnalysisResponse {
 
 // Proposals Types
 export interface ProposalGenerateRequest {
+    title?: string;
     include_cover?: boolean;
     include_site_map?: boolean;
     include_specs?: boolean;
