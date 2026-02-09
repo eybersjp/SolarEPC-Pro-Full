@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useDesignCanvasStore } from "@/stores/useDesignCanvasStore";
 import { useEquipmentModulesQuery, useEquipmentInvertersQuery } from "@/hooks/useEquipment";
 import { useSiteDesignQuery, useUpdateSiteDesignMutation } from "@/hooks/useSiteDesigns";
+import { useDebounce } from "@/hooks/useDebounce";
 import {
     Select,
     SelectContent,
@@ -24,21 +25,53 @@ export function EquipmentSelector({ designId }: EquipmentSelectorProps) {
     const { data: modules, isLoading: isLoadingModules, error: moduleError } = useEquipmentModulesQuery();
     const { data: inverters, isLoading: isLoadingInverters, error: inverterError } = useEquipmentInvertersQuery();
     const updateMutation = useUpdateSiteDesignMutation(designId);
+
     const setEquipmentSelection = useDesignCanvasStore((state) => state.setEquipmentSelection);
+    const setSyncState = useDesignCanvasStore((state) => state.setSyncState);
 
     const [moduleSearch, setModuleSearch] = useState("");
     const [inverterSearch, setInverterSearch] = useState("");
 
+    // Local state for debouncing
+    const [localModuleId, setLocalModuleId] = useState<string | null>(null);
+    const [localInverterId, setLocalInverterId] = useState<string | null>(null);
+
+    // Sync local state with design data
     useEffect(() => {
-        setEquipmentSelection(design?.equipment_module_id ?? null, design?.equipment_inverter_id ?? null);
-    }, [design?.equipment_module_id, design?.equipment_inverter_id, setEquipmentSelection]);
+        if (design) {
+            setLocalModuleId(design.equipment_module_id ?? null);
+            setLocalInverterId(design.equipment_inverter_id ?? null);
+            setEquipmentSelection(design.equipment_module_id ?? null, design.equipment_inverter_id ?? null);
+        }
+    }, [design?.id, design?.equipment_module_id, design?.equipment_inverter_id, setEquipmentSelection]);
+
+    // Debounced values
+    const debouncedModuleId = useDebounce(localModuleId, 30000); // 30s debounce
+    const debouncedInverterId = useDebounce(localInverterId, 30000); // 30s debounce
+
+    // Trigger mutations on debounced change
+    useEffect(() => {
+        if (debouncedModuleId !== undefined && debouncedModuleId !== design?.equipment_module_id) {
+            updateMutation.mutate({ equipment_module_id: debouncedModuleId ?? undefined });
+        }
+    }, [debouncedModuleId]);
+
+    useEffect(() => {
+        if (debouncedInverterId !== undefined && debouncedInverterId !== design?.equipment_inverter_id) {
+            updateMutation.mutate({ equipment_inverter_id: debouncedInverterId ?? undefined });
+        }
+    }, [debouncedInverterId]);
 
     const handleModuleChange = (moduleId: string) => {
-        updateMutation.mutate({ equipment_module_id: moduleId });
+        setLocalModuleId(moduleId);
+        setSyncState('pending');
+        setEquipmentSelection(moduleId, localInverterId);
     };
 
     const handleInverterChange = (inverterId: string) => {
-        updateMutation.mutate({ equipment_inverter_id: inverterId });
+        setLocalInverterId(inverterId);
+        setSyncState('pending');
+        setEquipmentSelection(localModuleId, inverterId);
     };
 
     const filteredModules = modules?.filter(m =>
@@ -100,7 +133,7 @@ export function EquipmentSelector({ designId }: EquipmentSelectorProps) {
                 </div>
 
                 <Select
-                    value={design?.equipment_module_id || ""}
+                    value={localModuleId || ""}
                     onValueChange={handleModuleChange}
                     disabled={updateMutation.isPending}
                 >
@@ -155,7 +188,7 @@ export function EquipmentSelector({ designId }: EquipmentSelectorProps) {
                 </div>
 
                 <Select
-                    value={design?.equipment_inverter_id || ""}
+                    value={localInverterId || ""}
                     onValueChange={handleInverterChange}
                     disabled={updateMutation.isPending}
                 >

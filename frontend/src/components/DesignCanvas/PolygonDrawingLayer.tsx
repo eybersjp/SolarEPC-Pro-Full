@@ -18,7 +18,7 @@ interface PolygonDrawingLayerProps {
  * Handles the interactive drawing of site boundaries and exclusion zones.
  */
 export default function PolygonDrawingLayer({ designId }: PolygonDrawingLayerProps) {
-    const { mode, selectedTool, setMode, setSelectedTool, hasEquipmentSelected } = useDesignCanvasStore();
+    const { mode, selectedTool, setMode, setSelectedTool, hasEquipmentSelected, setSyncState } = useDesignCanvasStore();
     const { data: design } = useSiteDesignQuery(designId);
     const updateMutation = useUpdateSiteDesignMutation(designId);
 
@@ -72,6 +72,7 @@ export default function PolygonDrawingLayer({ designId }: PolygonDrawingLayerPro
             }
         }
 
+        setSyncState('pending');
         updateMutation.mutate(updateData, {
             onSuccess: () => {
                 setMode('select');
@@ -79,7 +80,7 @@ export default function PolygonDrawingLayer({ designId }: PolygonDrawingLayerPro
                 setVertices([]);
             }
         });
-    }, [vertices, selectedTool, design, updateMutation, setMode, setSelectedTool]);
+    }, [vertices, selectedTool, design, updateMutation, setMode, setSelectedTool, setSyncState]);
 
     // Map Events
     useMapEvents({

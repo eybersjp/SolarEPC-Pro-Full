@@ -36,7 +36,7 @@ export function PlacementSettings({ designId }: PlacementSettingsProps) {
     }, [design, placementSettings, setPlacementSettings]);
 
     // Debounced save
-    const debouncedSettings = useDebounce(placementSettings, 3000); // 3s debounce (reduced from 30s for better UX)
+    const debouncedSettings = useDebounce(placementSettings, 30000); // 30s debounce for auto-save
 
     useEffect(() => {
         if (Object.keys(debouncedSettings).length > 0) {
