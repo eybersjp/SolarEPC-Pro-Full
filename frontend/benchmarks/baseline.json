@@ -1,0 +1,14 @@
+[
+    {
+        "testName": "renders large module counts - 500",
+        "renderTime": 185.0,
+        "modules": 500,
+        "timestamp": "2024-01-15T10:00:00Z"
+    },
+    {
+        "testName": "renders large module counts - 2000",
+        "renderTime": 420.0,
+        "modules": 2000,
+        "timestamp": "2024-01-15T10:00:00Z"
+    }
+]

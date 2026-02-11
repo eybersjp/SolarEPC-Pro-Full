@@ -10,7 +10,18 @@
         "test": "vitest",
         "test:ui": "vitest --ui",
         "test:coverage": "vitest --coverage",
-        "test:ci": "vitest run --coverage"
+        "test:ci": "vitest run --coverage",
+        "test:e2e": "playwright test",
+        "test:e2e:ui": "playwright test --ui",
+        "test:e2e:headed": "playwright test --headed",
+        "test:e2e:chrome": "playwright test --project=chromium-latest",
+        "test:e2e:firefox": "playwright test --project=firefox-latest",
+        "test:e2e:safari": "playwright test --project=webkit-latest",
+        "test:e2e:edge": "playwright test --project=edge-latest",
+        "test:e2e:debug": "playwright test --debug",
+        "test:performance": "vitest run performance.test.tsx --reporter=verbose",
+        "test:performance:report": "VITE_PERFORMANCE_REPORT=true vitest run performance.test.tsx --reporter=json --outputFile=performance-report-vitest.json",
+        "test:performance:baseline": "npm run test:performance:report && cp benchmarks/frontend-latest.json benchmarks/baseline.json"
     },
     "dependencies": {
         "@hookform/resolvers": "^5.2.2",
@@ -51,6 +62,7 @@
         "zustand": "^5.0.11"
     },
     "devDependencies": {
+        "@playwright/test": "^1.48.0",
         "@testing-library/jest-dom": "^6.4.2",
         "@testing-library/react": "^14.2.1",
         "@testing-library/user-event": "^14.5.2",
