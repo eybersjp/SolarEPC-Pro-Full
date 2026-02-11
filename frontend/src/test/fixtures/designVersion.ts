@@ -49,8 +49,9 @@ export const mockVersionDetail: DesignVersionDetail = {
 export const mockVersionRestoreResponse: DesignVersionRestoreResponse = {
     site_design: mockSiteDesign,
     recalculation_status: {
-        placement_triggered: true,
-        energy_triggered: true,
+        placement: "completed",
+        energy_estimation: "completed",
+        financial_analysis: "completed",
     },
 };
 

@@ -13,9 +13,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Save, AlertCircle } from "lucide-react";
+import { Loader2, Save, AlertCircle, History } from "lucide-react";
 import { useCreateVersionMutation } from "@/hooks/useSiteDesigns";
 import { cn } from "@/lib/utils";
+import { toast } from "@/lib/toast";
 
 interface SaveVersionModalProps {
     designId: string;
@@ -65,9 +66,13 @@ export function SaveVersionModal({ designId, open, onOpenChange, onVersionSaved 
             },
             {
                 onSuccess: () => {
+                    toast.success("Version saved successfully");
                     onVersionSaved?.(versionName.trim());
                     onOpenChange(false);
                 },
+                onError: (error: any) => {
+                    toast.error(error?.message || "Failed to save version");
+                }
             }
         );
     };

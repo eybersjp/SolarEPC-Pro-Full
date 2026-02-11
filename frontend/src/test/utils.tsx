@@ -1,6 +1,8 @@
 import React, { ReactElement } from 'react'
-import { render, RenderOptions, act } from '@testing-library/react'
+import { render, RenderOptions, act, within, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { useDesignCanvasStore } from '@/stores/useDesignCanvasStore'
+import { http, HttpResponse } from 'msw'
 
 const createTestQueryClient = () =>
     new QueryClient({
@@ -52,7 +54,6 @@ export const advanceDebounceTimer = async (ms = 30000) => {
 /**
  * Helper to mock sync state in the store
  */
-import { useDesignCanvasStore } from '@/stores/useDesignCanvasStore';
 export const mockSyncState = (state: 'synced' | 'pending' | 'syncing' | 'failed', overrides = {}) => {
     useDesignCanvasStore.setState({
         syncState: state,
@@ -74,8 +75,6 @@ export const selectEquipment = async (
     inverterId: string,
     screen: any
 ) => {
-    const { within } = await import('@testing-library/react')
-
     const equipmentPanel = screen.getByRole('region', { name: /equipment/i })
 
     // Select module
@@ -96,9 +95,6 @@ export const selectEquipment = async (
  * Helper to advance through debounce and verify save
  */
 export const advanceAndVerifySave = async (ms: number = 30000) => {
-    const { waitFor } = await import('@testing-library/react')
-    const { useDesignCanvasStore } = await import('@/stores/useDesignCanvasStore')
-
     act(() => {
         vi.advanceTimersByTime(ms)
     })
@@ -116,8 +112,6 @@ export const waitForPollingComplete = async (
     maxAttempts: number = 10,
     intervalMs: number = 2000
 ) => {
-    const { waitFor } = await import('@testing-library/react')
-
     for (let i = 0; i < maxAttempts; i++) {
         act(() => {
             vi.advanceTimersByTime(intervalMs)
@@ -141,8 +135,6 @@ export const generateProposal = async (
     screen: any,
     options?: { includeEnergy?: boolean; includeFinancial?: boolean }
 ) => {
-    const { within, waitFor } = await import('@testing-library/react')
-
     // Click "Generate Proposal" button
     const generateProposalButton = screen.getByRole('button', { name: /generate proposal/i })
     await user.click(generateProposalButton)
@@ -171,4 +163,44 @@ export const generateProposal = async (
     })
 
     return proposalWizard
+}
+
+/**
+ * Helper to simulate complete version save → restore workflow
+ */
+export async function simulateVersionWorkflow(
+    user: any,
+    screen: any,
+    designId: string,
+    versionName: string
+): Promise<void> {
+    // Save
+    const saveButton = screen.getByRole('button', { name: /save version/i })
+    await user.click(saveButton)
+    const nameInput = await screen.findByLabelText(/version name/i)
+    await user.type(nameInput, versionName)
+    await user.click(screen.getByRole('button', { name: /create version/i }))
+
+    // Wait for success
+    await waitFor(() => {
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    })
+}
+
+/**
+ * Helper to mock placement task status transitions
+ */
+export function mockPlacementTaskStatus(
+    server: any,
+    taskId: string,
+    statusSequence: Array<'pending' | 'processing' | 'completed' | 'failed'>
+): void {
+    let callCount = 0
+    server.use(
+        http.get(`*/api/v1/placement/status/${taskId}`, () => {
+            const status = statusSequence[Math.min(callCount, statusSequence.length - 1)]
+            callCount++
+            return HttpResponse.json({ task_id: taskId, status })
+        })
+    )
 }

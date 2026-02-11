@@ -21,7 +21,8 @@ import {
     Zap,
     Loader2,
     AlertCircle,
-    User
+    User,
+    History as HistoryIcon // Workaround if needed, but History is already there
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { useVersionsQuery, useRestoreVersionMutation } from "@/hooks/useSiteDesigns";
@@ -60,9 +61,27 @@ export function VersionList({
 }: VersionListProps) {
     const [versionToRestore, setVersionToRestore] = useState<DesignVersionResponse | null>(null);
     const [isRestoreDialogOpen, setIsRestoreDialogOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState("");
 
     const { data: versions, isLoading, isError, error, refetch } = useVersionsQuery(designId);
     const restoreMutation = useRestoreVersionMutation(designId);
+    const isModifiedSinceVersion = useDesignCanvasStore((state) => state.isModifiedSinceVersion);
+
+    // Keyboard shortcuts
+    React.useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.ctrlKey && e.key.toLowerCase() === 'h') {
+                e.preventDefault();
+                onOpenChange(!open);
+            }
+            if (e.key === 'Escape' && open) {
+                onOpenChange(false);
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [open, onOpenChange]);
 
     const handleRestoreClick = (e: React.MouseEvent, version: DesignVersionResponse) => {
         e.preventDefault();
@@ -94,6 +113,11 @@ export function VersionList({
         }
         return format(date, "MMM d, yyyy 'at' h:mm a");
     };
+
+    const filteredVersions = versions?.filter(v =>
+        v.version_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (v.created_by_name || "").toLowerCase().includes(searchQuery.toLowerCase())
+    );
 
     return (
         <>
@@ -127,7 +151,7 @@ export function VersionList({
                 </DropdownMenuTrigger>
 
                 <DropdownMenuContent
-                    className="w-80 max-h-[400px] overflow-y-auto"
+                    className="w-80 max-h-[450px] overflow-y-auto"
                     align="end"
                     aria-busy={isLoading}
                 >
@@ -135,6 +159,20 @@ export function VersionList({
                         <span>Version History</span>
                         {isLoading && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
                     </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+
+                    <div className="p-2">
+                        <div className="relative">
+                            <FileText className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                            <input
+                                className="flex h-9 w-full rounded-md border border-input bg-transparent px-8 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                placeholder="Search versions..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                aria-label="Search versions"
+                            />
+                        </div>
+                    </div>
                     <DropdownMenuSeparator />
 
                     {isLoading ? (
@@ -164,14 +202,23 @@ export function VersionList({
                                 Save a version to create snapshots of your design
                             </p>
                         </div>
+                    ) : filteredVersions?.length === 0 ? (
+                        <div className="p-8 text-center">
+                            <AlertCircle className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3" />
+                            <p className="text-sm font-medium">No versions found</p>
+                            <p className="text-xs text-muted-foreground">
+                                Try adjusting your search query
+                            </p>
+                        </div>
                     ) : (
                         <div className="py-1">
-                            {versions.map((version, index) => (
+                            {filteredVersions?.map((version, index) => (
                                 <div
                                     key={version.id}
+                                    role="listitem"
                                     className={cn(
                                         "px-3 py-3 hover:bg-accent/50 transition-colors group relative",
-                                        index !== versions.length - 1 && "border-b"
+                                        index !== filteredVersions.length - 1 && "border-b"
                                     )}
                                 >
                                     <div className="flex justify-between items-start gap-2 mb-1">
@@ -234,7 +281,11 @@ export function VersionList({
                 open={isRestoreDialogOpen}
                 onOpenChange={setIsRestoreDialogOpen}
                 title="Restore Version?"
-                description={`This will restore the design to '${versionToRestore?.version_name}'. Current unsaved changes will be lost. The system will automatically recalculate placement and energy estimates.`}
+                description={cn(
+                    `This will restore the design to '${versionToRestore?.version_name}'.`,
+                    isModifiedSinceVersion && "⚠️ Warning: You have unsaved changes that will be lost!",
+                    "The system will automatically recalculate placement and energy estimates."
+                )}
                 confirmLabel="Restore Version"
                 onConfirm={handleConfirmRestore}
                 isLoading={restoreMutation.isPending}

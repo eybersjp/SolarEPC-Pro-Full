@@ -28,6 +28,13 @@ export function useSiteDesignQuery(designId: string) {
         queryKey: queryKeys.siteDesigns.detail(designId),
         queryFn: () => siteDesignsApi.get(designId),
         enabled: !!designId,
+        refetchInterval: (query: any) => {
+            const status = query.state.data?.placement_task_status;
+            if (status === 'pending' || status === 'running') {
+                return 2000;
+            }
+            return false;
+        }
     });
 }
 
@@ -106,7 +113,7 @@ export function useUpdateSiteDesignMutation(designId: string) {
             setLastMutationData(null);
             queryClient.setQueryData(queryKeys.siteDesigns.detail(designId), data);
             queryClient.invalidateQueries({ queryKey: queryKeys.siteDesigns.lists() });
-            toast.success("Design saved");
+            toast.success("Version saved successfully");
         },
         onError: (err: any, newData, context) => {
             const retryCount = useDesignCanvasStore.getState().retryCount;
@@ -171,7 +178,6 @@ export function useRecalculatePlacementMutation(designId: string) {
         onSuccess: (data) => {
             setSyncState('synced');
             queryClient.setQueryData(queryKeys.siteDesigns.detail(designId), data);
-            toast.success("Layout recalculated");
         },
         onError: (error: Error) => {
             setSyncState('failed');

@@ -4,14 +4,14 @@
 
 SolarEPC Pro is tested and supported on the following browsers:
 
-| Browser | Minimum Version | Recommended Version | Status |
-|---------|----------------|---------------------|--------|
-| **Chrome** | 120+ | Latest | ✅ Fully Supported |
-| **Firefox** | 121+ | Latest | ✅ Fully Supported |
-| **Safari** | 17+ | Latest | ✅ Fully Supported |
-| **Edge** | 120+ | Latest | ✅ Fully Supported |
-| **Mobile Safari** | iOS 17+ | Latest | ✅ Fully Supported |
-| **Chrome Mobile** | Android 12+ | Latest | ✅ Fully Supported |
+| Browser           | Minimum Version | Recommended Version | Status             |
+|-------------------|-----------------|---------------------|--------------------|
+| **Chrome**        | 120+            | Latest              | ✅ Fully Supported |
+| **Firefox**       | 121+            | Latest              | ✅ Fully Supported |
+| **Safari**        | 17+             | Latest              | ✅ Fully Supported |
+| **Edge**          | 120+            | Latest              | ✅ Fully Supported |
+| **Mobile Safari** | iOS 17+         | Latest              | ✅ Fully Supported |
+| **Chrome Mobile** | Android 12+     | Latest              | ✅ Fully Supported |
 
 > [!NOTE]
 > We test against the **last 2 major versions** of each browser to ensure compatibility and performance.
@@ -466,25 +466,35 @@ const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.pn
 
 Cross-browser tests run automatically on:
 
-- **Push to main branch**
-- **Pull requests**
-- **Nightly builds** (for extended browser matrix)
+- **Push to main branch**: Runs standard browser matrix, extended viewports, and platform-specific tests.
+- **Pull requests**: Runs standard browser matrix (Chrome, Firefox, Safari, Edge).
+- **Nightly builds**: Runs comprehensive matrix (all 12 browser projects) at 2 AM UTC daily.
+- **Manual trigger**: Can be triggered via `workflow_dispatch` for specific browser/platform combinations.
 
 ### Browser Matrix
 
-| Environment | Browsers Tested |
-|-------------|----------------|
-| **Ubuntu** | Chrome, Firefox, Edge (via Chromium) |
-| **macOS** | Safari, Chrome, Firefox |
-| **Windows** | Edge, Chrome, Firefox |
+| Environment | Chrome      | Firefox | Safari       | Edge           |
+|-------------|-------------|---------|--------------|----------------|
+| **Ubuntu**  | ✅          | ✅      | ✅ (WebKit)  | ✅ (Chromium)  |
+| **Windows** | ✅          | ✅      | ❌           | ✅ (Native)    |
+| **macOS**   | ✅          | ✅      | ✅ (Native)  | ✅ (Chromium)  |
 
 ### Viewing Test Results
 
-1. Go to **Actions** tab in GitHub repository
-2. Select **Frontend Tests** workflow
-3. Click on specific run
-4. Download **playwright-report** artifact
-5. Extract and open `index.html` in browser
+1. Go to **Actions** tab in GitHub repository.
+2. Select **Frontend Tests** workflow.
+3. Click on a specific run to see job results.
+4. View **E2E Test Results Summary** in the run summary or PR comment.
+5. Download artifacts for detailed investigation:
+   - `playwright-html-report-{browser}`: Full HTML report.
+   - `playwright-traces-{browser}`: Trace files for debugging failures.
+   - `playwright-json-results-{browser}`: Programmatic result data.
+
+### Retention Policy
+
+- **PR Tests**: Artifacts retained for 7 days.
+- **Main Branch Tests**: Artifacts retained for 14 days.
+- **Nightly Tests**: Artifacts retained for 30 days.
 
 ---
 
@@ -507,18 +517,18 @@ If you encounter a browser-specific issue:
 
 ## Browser Feature Support Matrix
 
-| Feature | Chrome | Firefox | Safari | Edge |
-|---------|--------|---------|--------|------|
-| Clipboard API | ✅ | ✅ | ⚠️ Limited | ✅ |
-| Geolocation | ✅ | ✅ | ✅ | ✅ |
-| IndexedDB | ✅ | ✅ | ✅ | ✅ |
-| WebGL | ✅ | ✅ | ✅ | ✅ |
-| Service Workers | ✅ | ✅ | ✅ | ✅ |
-| WebP Images | ✅ | ✅ | ✅ | ✅ |
-| CSS Grid | ✅ | ✅ | ✅ | ✅ |
-| CSS Flexbox | ✅ | ✅ | ✅ | ✅ |
-| Touch Events | ✅ | ✅ | ✅ | ✅ |
-| Pointer Events | ✅ | ✅ | ✅ | ✅ |
+| Feature          | Chrome | Firefox | Safari      | Edge |
+|------------------|--------|---------|-------------|------|
+| Clipboard API    | ✅     | ✅      | ⚠️ Limited  | ✅   |
+| Geolocation      | ✅     | ✅      | ✅          | ✅   |
+| IndexedDB        | ✅     | ✅      | ✅          | ✅   |
+| WebGL            | ✅     | ✅      | ✅          | ✅   |
+| Service Workers  | ✅     | ✅      | ✅          | ✅   |
+| WebP Images      | ✅     | ✅      | ✅          | ✅   |
+| CSS Grid         | ✅     | ✅      | ✅          | ✅   |
+| CSS Flexbox      | ✅     | ✅      | ✅          | ✅   |
+| Touch Events     | ✅     | ✅      | ✅          | ✅   |
+| Pointer Events   | ✅     | ✅      | ✅          | ✅   |
 
 Legend:
 

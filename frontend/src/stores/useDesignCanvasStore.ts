@@ -17,6 +17,8 @@ interface DesignCanvasState {
     lastMutationData: Partial<SiteDesignUpdate> | null;
     currentVersionName: string | null;
     isModifiedSinceVersion: boolean;
+    placementStatus: string | null;
+    placementError: string | null;
 
     // Actions
     setMode: (mode: 'select' | 'draw' | 'edit') => void;
@@ -35,6 +37,7 @@ interface DesignCanvasState {
     setLastMutationData: (data: Partial<SiteDesignUpdate> | null) => void;
     setCurrentVersionName: (name: string | null) => void;
     setIsModifiedSinceVersion: (isModified: boolean) => void;
+    setPlacementStatus: (status: string | null, error?: string | null) => void;
 }
 
 export const useDesignCanvasStore = create<DesignCanvasState>((set) => ({
@@ -53,6 +56,8 @@ export const useDesignCanvasStore = create<DesignCanvasState>((set) => ({
     lastMutationData: null,
     currentVersionName: null,
     isModifiedSinceVersion: false,
+    placementStatus: null,
+    placementError: null,
 
     setMode: (mode) => set({
         mode,
@@ -133,4 +138,8 @@ export const useDesignCanvasStore = create<DesignCanvasState>((set) => ({
         };
     }),
     setIsModifiedSinceVersion: (isModifiedSinceVersion) => set({ isModifiedSinceVersion }),
+    setPlacementStatus: (placementStatus, placementError = null) => set({
+        placementStatus,
+        placementError
+    }),
 }));

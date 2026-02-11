@@ -9,6 +9,8 @@ from app.schemas.design_version import DesignVersionCreate
 from app.services.audit import AuditService
 from app.services.energy_estimation import EnergyEstimationService
 from app.services.financial_analysis import FinancialAnalysisService
+from app.services.site_design import SiteDesignService
+from app.services.proposal import ProposalService
 
 
 class DesignVersionService:
@@ -231,14 +233,15 @@ class DesignVersionService:
         snapshot = version.snapshot_data
         
         # 2. Capture old state for audit
+        import copy
         old_state = {
             "name": site_design.name,
             "site_type": site_design.site_type,
             "equipment_module_id": str(site_design.equipment_module_id),
             "equipment_inverter_id": str(site_design.equipment_inverter_id),
-            "site_boundary": site_design.site_boundary,
-            "exclusion_zones": site_design.exclusion_zones,
-            "module_placements": site_design.module_placements,
+            "site_boundary": copy.deepcopy(site_design.site_boundary),
+            "exclusion_zones": copy.deepcopy(site_design.exclusion_zones),
+            "module_placements": copy.deepcopy(site_design.module_placements),
             "edge_setback_m": site_design.edge_setback_m,
             "row_spacing_m": site_design.row_spacing_m,
             "module_orientation": site_design.module_orientation,
@@ -248,6 +251,20 @@ class DesignVersionService:
             "system_size_kwp": site_design.system_size_kwp,
             "site_area_sqm": site_design.site_area_sqm,
         }
+
+        # 2.5 Validate Equipment existence (Edge case)
+        from app.models.models import EquipmentModule, EquipmentInverter
+        module_id = UUID(snapshot["equipment_module_id"])
+        inverter_id = UUID(snapshot["equipment_inverter_id"])
+        
+        module_exists = self.db.query(EquipmentModule).filter(EquipmentModule.id == module_id).first()
+        inverter_exists = self.db.query(EquipmentInverter).filter(EquipmentInverter.id == inverter_id).first()
+        
+        if not module_exists or not inverter_exists:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Referenced equipment in snapshot no longer exists"
+            )
 
         # 3. Update SiteDesign fields
         site_design.name = snapshot.get("name", site_design.name) 
@@ -294,7 +311,7 @@ class DesignVersionService:
             old_value=old_state,
             new_value={
                 "restored_from_version_id": str(version_id),
-                "restored_from_version_name": version.version_name,
+                "restored_from_version_name": str(version.version_name),
                 **new_state
             }
         )
@@ -304,36 +321,63 @@ class DesignVersionService:
 
         # 6. Trigger Recalculations if needed
         recalc_status = {
+            "placement": "skipped",
             "energy_estimation": "skipped",
             "financial_analysis": "skipped"
         }
 
+        # Parameters that affect placement:
+        placement_params = [
+            "site_boundary", "exclusion_zones", "equipment_module_id",
+            "edge_setback_m", "row_spacing_m", "module_orientation",
+            "azimuth_deg", "tilt_deg"
+        ]
+        
+        placement_changed = any(old_state.get(p) != new_state.get(p) for p in placement_params)
+        
         # Parameters that affect energy estimation:
         energy_params = [
             "site_type", "equipment_module_id", "azimuth_deg", 
             "tilt_deg", "system_size_kwp"
         ]
-        
         energy_changed = any(old_state.get(p) != new_state.get(p) for p in energy_params)
-        
-        if energy_changed:
+
+        site_service = SiteDesignService(self.db, self.tenant_id, self.user_id)
+
+        if placement_changed:
+            try:
+                # If placement changed, we trigger placement AND tell it to trigger energy after
+                result = site_service.recalculate_design(site_design.id, trigger_energy_estimation=True)
+                recalc_status["placement"] = result.get("status") or result.get("mode") or "pending"
+                if "task_id" in result:
+                    recalc_status["placement_task_id"] = result["task_id"]
+                recalc_status["energy_estimation"] = "waiting_for_placement"
+            except Exception as e:
+                recalc_status["placement"] = f"error: {str(e)}"
+        elif energy_changed:
             energy_service = EnergyEstimationService(self.db)
             try:
                 estimate = energy_service.estimate_energy_async(site_design.id)
-                recalc_status["energy_estimation"] = estimate.status
+                recalc_status["energy_estimation"] = str(estimate.status)
+                # Financials will be triggered after energy
+                recalc_status["financial_analysis"] = "waiting_for_energy"
             except Exception as e:
                 recalc_status["energy_estimation"] = f"error: {str(e)}"
-
-        # Financials depend on energy results and system cost (from BOQ, which might not change here, 
-        # but system size change usually implies financials should be updated)
-        if energy_changed or old_state.get("system_size_kwp") != new_state.get("system_size_kwp"):
+        
+        # If financials need update but energy hasn't changed (e.g. only system_size_kwp changed manually? 
+        # but system_size_kwp change usually implies energy changed too)
+        if not placement_changed and not energy_changed and old_state.get("system_size_kwp") != new_state.get("system_size_kwp"):
             financial_service = FinancialAnalysisService(self.db, self.tenant_id, self.user_id)
             try:
-                # Note: Financial calculation is sync in the current service implementation
                 financial_service.calculate_financials(site_design.id)
                 recalc_status["financial_analysis"] = "completed"
             except Exception as e:
                 recalc_status["financial_analysis"] = f"error: {str(e)}"
+
+        # 7. Mark Proposals as Outdated and Trigger Regeneration
+        proposal_service = ProposalService(self.db, tenant_id=self.tenant_id, user_id=self.user_id)
+        proposal_service.mark_as_outdated(site_design.id)
+        proposal_service.regenerate_proposal(site_design.id)
 
         return site_design, recalc_status
 

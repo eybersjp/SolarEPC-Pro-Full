@@ -19,6 +19,7 @@ afterAll(() => server.close())
 vi.mock('react-leaflet', () => ({
     MapContainer: ({ children }: any) => <div data-testid="map-container">{children}</div>,
     TileLayer: () => <div data-testid="tile-layer" />,
+    ZoomControl: (props: any) => <div data-testid="zoom-control" {...props} />,
     Polygon: (props: any) => <div data-testid="polygon" {...props} />,
     Polyline: (props: any) => <div data-testid="polyline" {...props} />,
     Marker: (props: any) => <div data-testid="marker" {...props} />,

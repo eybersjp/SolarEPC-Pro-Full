@@ -19,16 +19,26 @@ export function usePlacementMonitor(designId: string) {
         if (!design) return;
 
         const status = design.placement_task_status;
+        const error = design.placement_task_error;
         const isLoading = status === 'pending' || status === 'running';
 
+        console.error(`[usePlacementMonitor] Status update: ${status}, Last: ${lastStatus.current}, IsLoading: ${isLoading}`);
+
         setPlacementLoading(isLoading);
+        useDesignCanvasStore.getState().setPlacementStatus(status, error);
 
         // Handle transitions for notifications
         if (lastStatus.current === 'running' || lastStatus.current === 'pending') {
             if (status === 'completed') {
+                console.error('[usePlacementMonitor] Triggering success toast');
                 toast.success("Module placement optimization complete!");
-            } else if (status === 'failed') {
-                toast.error(design.placement_task_error || "Background optimization failed");
+            }
+            if (status === 'failed') {
+                console.error('[usePlacementMonitor] Triggering failure toast');
+                const errorMsg = error || "Optimization failed";
+                if (!errorMsg.includes("Optimization failed")) {
+                    toast.error(`Placement failed: ${errorMsg}`);
+                }
             }
         }
 

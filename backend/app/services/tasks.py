@@ -9,13 +9,15 @@ def calculate_placement_async(
     site_boundary: Dict[str, Any],
     exclusion_zones: List[Dict[str, Any]],
     module_dims: Dict[str, float],
-    settings: Dict[str, Any]
+    settings: Dict[str, Any],
+    trigger_energy_estimation: bool = False
 ) -> Dict[str, Any]:
     """
     Async task for placement calculation with DB persistence.
     """
     from app.core.database import SessionLocal
     from app.models.models import SiteDesign, EquipmentModule
+    from app.services.energy_estimation import EnergyEstimationService
     from uuid import UUID
     from datetime import datetime
     import logging
@@ -56,6 +58,12 @@ def calculate_placement_async(
         db.commit()
         logger.info(f"Successfully completed placement calculation for design {design_id}")
         
+        # 4. Trigger Energy Estimation if requested
+        if trigger_energy_estimation:
+            logger.info(f"Triggering energy estimation after placement for design {design_id}")
+            energy_service = EnergyEstimationService(db)
+            energy_service.estimate_energy_async(design.id)
+
         return {
             "status": "success",
             "total_modules": design.total_modules,

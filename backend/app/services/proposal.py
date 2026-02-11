@@ -206,6 +206,32 @@ class ProposalService:
         logger.info(f"Successfully exported BOM CSV for design {site_design_id}")
         return csv_content
 
+    def mark_as_outdated(self, site_design_id: UUID):
+        """
+        Mark any existing proposals for this design as outdated.
+        Since we don't have a Proposal model yet, we log this event.
+        """
+        logger.info(f"Proposals for site design {site_design_id} marked as outdated due to design changes")
+        if self.audit_service:
+            self.audit_service.log(
+                tenant_id=self.tenant_id,
+                user_id=self.user_id,
+                entity_type="Proposal",
+                entity_id=site_design_id,
+                action="mark_outdated",
+                new_value={"reason": "design_restored"}
+            )
+            self.db.commit()
+
+    def regenerate_proposal(self, site_design_id: UUID):
+        """
+        Trigger a new proposal generation task automatically.
+        Called after version restoration or major design updates.
+        """
+        from app.services.tasks import generate_proposal_task
+        logger.info(f"Triggering automatic proposal regeneration for design {site_design_id}")
+        generate_proposal_task.delay(str(site_design_id))
+
     def _generate_monthly_chart(self, monthly_data: Any) -> Optional[str]:
         """
         Generate a bar chart of monthly energy production.

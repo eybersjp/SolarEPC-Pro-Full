@@ -19,6 +19,11 @@
         "test:e2e:safari": "playwright test --project=webkit-latest",
         "test:e2e:edge": "playwright test --project=edge-latest",
         "test:e2e:debug": "playwright test --debug",
+        "test:e2e:all": "playwright test --project=chromium-latest --project=firefox-latest --project=webkit-latest --project=edge-latest",
+        "test:e2e:mobile": "playwright test --project=mobile-chrome --project=mobile-safari",
+        "test:e2e:tablet": "playwright test --project=tablet-chrome --project=tablet-safari",
+        "test:e2e:versions": "playwright test --project=chromium-latest --project=chromium-previous --project=firefox-latest --project=firefox-previous --project=webkit-latest --project=webkit-previous --project=edge-latest --project=edge-previous",
+        "test:e2e:report": "playwright show-report",
         "test:performance": "vitest run performance.test.tsx --reporter=verbose",
         "test:performance:report": "VITE_PERFORMANCE_REPORT=true vitest run performance.test.tsx --reporter=json --outputFile=performance-report-vitest.json",
         "test:performance:baseline": "npm run test:performance:report && cp benchmarks/frontend-latest.json benchmarks/baseline.json"

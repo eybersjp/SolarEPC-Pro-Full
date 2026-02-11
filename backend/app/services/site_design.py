@@ -294,7 +294,7 @@ class SiteDesignService:
         )
         self.db.delete(design)
 
-    def recalculate_design(self, design_id: UUID) -> Dict[str, Any]:
+    def recalculate_design(self, design_id: UUID, trigger_energy_estimation: bool = False) -> Dict[str, Any]:
         """
         Recalculate module placement.
         Hybrid execution:
@@ -363,6 +363,12 @@ class SiteDesignService:
             
             self.db.commit()
             self.db.refresh(design)
+
+            # Trigger Energy Estimation if requested (Sync mode)
+            if trigger_energy_estimation:
+                from app.services.energy_estimation import EnergyEstimationService
+                energy_service = EnergyEstimationService(self.db)
+                energy_service.estimate_energy_async(design.id)
             
             return {
                 "mode": "sync",
@@ -384,7 +390,8 @@ class SiteDesignService:
                 site_boundary,
                 exclusion_zones,
                 module_dims,
-                settings
+                settings,
+                trigger_energy_estimation=trigger_energy_estimation
             )
             
             # 3. Store task ID
