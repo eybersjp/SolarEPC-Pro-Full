@@ -23,12 +23,13 @@ export function usePlacementMonitor(designId: string) {
         const isLoading = status === 'pending' || status === 'running';
 
         console.error(`[usePlacementMonitor] Status update: ${status}, Last: ${lastStatus.current}, IsLoading: ${isLoading}`);
+        // toast.error(`DEBUG: ${status} [${lastStatus.current}]`);
 
         setPlacementLoading(isLoading);
         useDesignCanvasStore.getState().setPlacementStatus(status, error);
 
         // Handle transitions for notifications
-        if (lastStatus.current === 'running' || lastStatus.current === 'pending') {
+        if (lastStatus.current && ['running', 'pending', 'failed', 'retrying'].includes(lastStatus.current)) {
             if (status === 'completed') {
                 console.error('[usePlacementMonitor] Triggering success toast');
                 toast.success("Module placement optimization complete!");
