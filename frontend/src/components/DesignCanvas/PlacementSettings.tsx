@@ -17,11 +17,9 @@ interface PlacementSettingsProps {
 }
 
 export function PlacementSettings({ designId }: PlacementSettingsProps) {
-    const {
-        placementSettings,
-        setPlacementSettings,
-        setSyncState
-    } = useDesignCanvasStore();
+    const placementSettings = useDesignCanvasStore((state) => state.placementSettings);
+    const setPlacementSettings = useDesignCanvasStore((state) => state.setPlacementSettings);
+    const setSyncState = useDesignCanvasStore((state) => state.setSyncState);
 
     // Fetch current design data
     const { data: design } = useSiteDesignQuery(designId);
@@ -30,10 +28,13 @@ export function PlacementSettings({ designId }: PlacementSettingsProps) {
 
     // Initialize local state from DB if not already set
     useEffect(() => {
-        if (design?.placement_settings && Object.keys(placementSettings).length === 0) {
-            setPlacementSettings(design.placement_settings);
+        const hasDBSettings = design?.placement_settings && Object.keys(design.placement_settings).length > 0;
+        const hasStoreSettings = Object.keys(placementSettings).length > 0;
+
+        if (hasDBSettings && !hasStoreSettings) {
+            setPlacementSettings(design.placement_settings!);
         }
-    }, [design, placementSettings, setPlacementSettings]);
+    }, [design?.id, design?.placement_settings, placementSettings, setPlacementSettings]);
 
     // Debounced save
     const debouncedSettings = useDebounce(placementSettings, 30000); // 30s debounce for auto-save

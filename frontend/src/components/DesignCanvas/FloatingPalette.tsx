@@ -9,7 +9,12 @@ import {
 } from "@/components/ui/tooltip";
 
 export function FloatingPalette() {
-    const { mode, selectedTool, setMode, setSelectedTool, setSelectedGeometry, hasEquipmentSelected } = useDesignCanvasStore();
+    const mode = useDesignCanvasStore((state) => state.mode);
+    const selectedTool = useDesignCanvasStore((state) => state.selectedTool);
+    const setMode = useDesignCanvasStore((state) => state.setMode);
+    const setSelectedTool = useDesignCanvasStore((state) => state.setSelectedTool);
+    const setSelectedGeometry = useDesignCanvasStore((state) => state.setSelectedGeometry);
+    const hasEquipmentSelected = useDesignCanvasStore((state) => state.hasEquipmentSelected);
 
     const tools = [
         { id: 'select', icon: MousePointer2, label: 'Select' },

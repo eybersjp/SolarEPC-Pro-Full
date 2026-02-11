@@ -31,7 +31,7 @@ export function SaveVersionModal({ designId, open, onOpenChange, onVersionSaved 
 
     const createMutation = useCreateVersionMutation(designId);
 
-    // Reset form when modal opens/closes
+    // Reset form when modal closes
     useEffect(() => {
         if (!open) {
             setVersionName("");
@@ -39,7 +39,7 @@ export function SaveVersionModal({ designId, open, onOpenChange, onVersionSaved 
             setValidationError(null);
             createMutation.reset();
         }
-    }, [open, createMutation]);
+    }, [open]); // removed createMutation from dependencies to prevent loops
 
     const validateVersionName = (name: string) => {
         if (!name.trim()) {

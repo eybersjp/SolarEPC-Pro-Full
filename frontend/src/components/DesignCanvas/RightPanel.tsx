@@ -13,7 +13,9 @@ interface RightPanelProps {
 }
 
 export function RightPanel({ designId, isVersionListOpen, onVersionListOpenChange }: RightPanelProps) {
-    const { rightPanelOpen, toggleRightPanel, setCurrentVersionName } = useDesignCanvasStore();
+    const rightPanelOpen = useDesignCanvasStore((state) => state.rightPanelOpen);
+    const toggleRightPanel = useDesignCanvasStore((state) => state.toggleRightPanel);
+    const setCurrentVersionName = useDesignCanvasStore((state) => state.setCurrentVersionName);
 
     const handleVersionRestored = (versionName: string) => {
         setCurrentVersionName(versionName);
@@ -27,6 +29,7 @@ export function RightPanel({ designId, isVersionListOpen, onVersionListOpenChang
                     size="sm"
                     className="rounded-r-none border-l-0 shadow-md"
                     onClick={toggleRightPanel}
+                    aria-label="Open Properties Panel"
                 >
                     <ChevronLeft className="h-4 w-4" />
                 </Button>
@@ -41,7 +44,7 @@ export function RightPanel({ designId, isVersionListOpen, onVersionListOpenChang
                     <Settings className="h-4 w-4" />
                     Properties
                 </div>
-                <Button variant="ghost" size="icon" onClick={toggleRightPanel} className="h-8 w-8">
+                <Button variant="ghost" size="icon" onClick={toggleRightPanel} className="h-8 w-8" aria-label="Close Properties Panel">
                     <ChevronRight className="h-4 w-4" />
                 </Button>
             </div>

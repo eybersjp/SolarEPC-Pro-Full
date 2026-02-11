@@ -59,21 +59,41 @@ export const useDesignCanvasStore = create<DesignCanvasState>((set) => ({
         // Reset selection when changing modes
         selectedGeometry: null
     }),
-    setSelectedTool: (selectedTool) => set({ selectedTool }),
+    setSelectedTool: (selectedTool) => set((state) => {
+        if (state.selectedTool === selectedTool) return state;
+        return { selectedTool };
+    }),
     setSelectedGeometry: (selectedGeometry) => set({ selectedGeometry }),
-    setSyncState: (syncState) => set((state) => ({
-        syncState,
-        retryCount: syncState === 'synced' ? 0 : state.retryCount,
-        lastSyncedAt: syncState === 'synced' ? new Date() : state.lastSyncedAt
-    })),
-    setPlacementLoading: (placementLoading) => set({ placementLoading }),
+    setSyncState: (syncState) => set((state) => {
+        if (state.syncState === syncState) return state;
+        return {
+            syncState,
+            retryCount: syncState === 'synced' ? 0 : state.retryCount,
+            lastSyncedAt: syncState === 'synced' ? new Date() : state.lastSyncedAt
+        };
+    }),
+    setPlacementLoading: (placementLoading) => set((state) => {
+        if (state.placementLoading === placementLoading) return state;
+        return { placementLoading };
+    }),
     setRightPanelOpen: (rightPanelOpen) => set({ rightPanelOpen }),
     toggleRightPanel: () => set((state) => ({ rightPanelOpen: !state.rightPanelOpen })),
-    setPlacementSettings: (placementSettings) => set((state) => ({
-        placementSettings: { ...state.placementSettings, ...placementSettings },
-        isModifiedSinceVersion: true
-    })),
+    setPlacementSettings: (placementSettings) => set((state) => {
+        const nextSettings = { ...state.placementSettings, ...placementSettings };
+        // Simple equality check for primary fields
+        if (JSON.stringify(state.placementSettings) === JSON.stringify(nextSettings)) {
+            return state;
+        }
+        return {
+            placementSettings: nextSettings,
+            isModifiedSinceVersion: true
+        };
+    }),
     setEquipmentSelection: (moduleId, inverterId) => set((state) => {
+        if (state.equipmentModuleId === moduleId && state.equipmentInverterId === inverterId) {
+            return state;
+        }
+
         const hasSelected = !!moduleId && !!inverterId;
         // If we are losing selection and currently drawing, reset to select mode
         const shouldResetMode = !hasSelected && state.mode === 'draw';
@@ -105,9 +125,12 @@ export const useDesignCanvasStore = create<DesignCanvasState>((set) => ({
     setLastSyncedAt: (lastSyncedAt) => set({ lastSyncedAt }),
     resetRetryCount: () => set({ retryCount: 0 }),
     setLastMutationData: (lastMutationData) => set({ lastMutationData }),
-    setCurrentVersionName: (currentVersionName) => set({
-        currentVersionName,
-        isModifiedSinceVersion: false // Reset modification flag when a new version context is set
+    setCurrentVersionName: (currentVersionName) => set((state) => {
+        if (state.currentVersionName === currentVersionName) return state;
+        return {
+            currentVersionName,
+            isModifiedSinceVersion: false // Reset modification flag when a new version context is set
+        };
     }),
     setIsModifiedSinceVersion: (isModifiedSinceVersion) => set({ isModifiedSinceVersion }),
 }));

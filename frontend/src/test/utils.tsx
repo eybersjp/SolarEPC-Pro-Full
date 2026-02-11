@@ -11,10 +11,10 @@ const createTestQueryClient = () =>
         },
     })
 
-const AllTheProviders = ({ children }: { children: React.ReactNode }) => {
-    const [queryClient] = React.useState(() => createTestQueryClient())
+const AllTheProviders = ({ children, queryClient }: { children: React.ReactNode, queryClient?: QueryClient }) => {
+    const [client] = React.useState(() => queryClient || createTestQueryClient())
     return (
-        <QueryClientProvider client={queryClient}>
+        <QueryClientProvider client={client}>
             {children}
         </QueryClientProvider>
     )
@@ -22,8 +22,14 @@ const AllTheProviders = ({ children }: { children: React.ReactNode }) => {
 
 const renderWithProviders = (
     ui: ReactElement,
-    options?: Omit<RenderOptions, 'wrapper'>
-) => render(ui, { wrapper: AllTheProviders, ...options })
+    options?: Omit<RenderOptions, 'wrapper'> & { queryClient?: QueryClient }
+) => {
+    const { queryClient, ...renderOptions } = options || {}
+    return render(ui, {
+        wrapper: (props) => <AllTheProviders {...props} queryClient={queryClient} />,
+        ...renderOptions
+    })
+}
 
 export const createWrapper = () => {
     const queryClient = createTestQueryClient()
@@ -59,20 +65,110 @@ export const mockSyncState = (state: 'synced' | 'pending' | 'syncing' | 'failed'
 export * from '@testing-library/react'
 export { renderWithProviders, createTestQueryClient }
 
-// Note: The user plan asked to add `renderProposalWizard` here, but it requires importing `ProposalWizard` which might cause circular deps if not careful or just clutter utils.
-// However, strictly following the plan:
-// "Add helper function for rendering ProposalWizard with common props"
-// But `ProposalWizard` is a component. `utils.tsx` is generic.
-// If I import `ProposalWizard` here, `utils.tsx` depends on `ProposalWizard`.
-// Use specific test file for the helper is better. I already added `renderProposalWizard` inside `ProposalWizard.test.tsx`.
-// I will skip adding it to `utils.tsx` to avoid tight coupling in generic utils, unless I make a specific text fixture file.
-// Wait, "Follow the below plan verbatim".
-// Okay, if I must. But `ProposalWizard` import might be an issue if it's not exported or if paths are weird.
-// Actually, `ProposalWizard` is at `src/components/DesignCanvas/ProposalWizard.tsx`.
-// `utils.tsx` is at `src/test/utils.tsx`.
-// It's fine. But I'll stick to my local definition in `ProposalWizard.test.tsx` as it's already there and working.
-// I will assume "Add Test Helper Utilities" implies adding generic helpers if needed.
-// The plan said: "Add helper function for rendering ProposalWizard... File: frontend/src/test/utils.tsx".
-// I will overwrite `utils.tsx` to include it if I want to be 100% compliant, but I already implemented it in the test file.
-// Let's just leave it in the test file for now as it's cleaner.
-// I'll update task.md to mark it as done effectively.
+/**
+ * Helper to simulate complete equipment selection
+ */
+export const selectEquipment = async (
+    user: any,
+    moduleId: string,
+    inverterId: string,
+    screen: any
+) => {
+    const { within } = await import('@testing-library/react')
+
+    const equipmentPanel = screen.getByRole('region', { name: /equipment/i })
+
+    // Select module
+    const moduleSelect = within(equipmentPanel).getByLabelText(/select module/i)
+    await user.click(moduleSelect)
+    const moduleOption = await screen.findByRole('option', { name: new RegExp(moduleId, 'i') })
+    await user.click(moduleOption)
+
+    // Select inverter
+    const inverterSelect = within(equipmentPanel).getByLabelText(/select inverter/i)
+    await user.click(inverterSelect)
+    const inverterOption = await screen.findByRole('option', { name: new RegExp(inverterId, 'i') })
+    await user.click(inverterOption)
+}
+
+
+/**
+ * Helper to advance through debounce and verify save
+ */
+export const advanceAndVerifySave = async (ms: number = 30000) => {
+    const { waitFor } = await import('@testing-library/react')
+    const { useDesignCanvasStore } = await import('@/stores/useDesignCanvasStore')
+
+    act(() => {
+        vi.advanceTimersByTime(ms)
+    })
+
+    await waitFor(() => {
+        expect(useDesignCanvasStore.getState().syncState).toBe('synced')
+    })
+}
+
+/**
+ * Helper to wait for polling completion
+ */
+export const waitForPollingComplete = async (
+    checkCondition: () => boolean,
+    maxAttempts: number = 10,
+    intervalMs: number = 2000
+) => {
+    const { waitFor } = await import('@testing-library/react')
+
+    for (let i = 0; i < maxAttempts; i++) {
+        act(() => {
+            vi.advanceTimersByTime(intervalMs)
+        })
+
+        if (checkCondition()) {
+            return
+        }
+    }
+
+    await waitFor(() => {
+        expect(checkCondition()).toBe(true)
+    })
+}
+
+/**
+ * Helper to simulate proposal generation flow
+ */
+export const generateProposal = async (
+    user: any,
+    screen: any,
+    options?: { includeEnergy?: boolean; includeFinancial?: boolean }
+) => {
+    const { within, waitFor } = await import('@testing-library/react')
+
+    // Click "Generate Proposal" button
+    const generateProposalButton = screen.getByRole('button', { name: /generate proposal/i })
+    await user.click(generateProposalButton)
+
+    // Wait for wizard to open
+    const proposalWizard = await screen.findByRole('dialog', { name: /proposal wizard/i })
+
+    // Configure options if provided
+    if (options?.includeEnergy) {
+        const includeEnergy = within(proposalWizard).getByLabelText(/include energy analysis/i)
+        await user.click(includeEnergy)
+    }
+
+    if (options?.includeFinancial) {
+        const includeFinancial = within(proposalWizard).getByLabelText(/include financial analysis/i)
+        await user.click(includeFinancial)
+    }
+
+    // Click "Generate" button
+    const generateButton = within(proposalWizard).getByRole('button', { name: /generate/i })
+    await user.click(generateButton)
+
+    // Wait for generation to start
+    await waitFor(() => {
+        expect(within(proposalWizard).getByText(/generating/i)).toBeInTheDocument()
+    })
+
+    return proposalWizard
+}

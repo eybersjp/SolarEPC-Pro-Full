@@ -117,4 +117,15 @@ export const mockSiteDesignWithPendingSync: SiteDesignResponse = {
     updated_at: new Date(Date.now() - 1000 * 60).toISOString(), // 1 minute ago
 };
 
+export const mockSiteDesignWithPlacements: SiteDesignResponse = {
+    ...mockSiteDesign,
+    module_placements: [
+        { id: 1, x: 0, y: 0, azimuth: 0, tilt: 10 },
+        { id: 2, x: 1, y: 0, azimuth: 0, tilt: 10 },
+    ],
+    total_modules: 2,
+    system_size_kwp: 0.8,
+};
+
 export { mockVersionResponse, mockVersionsList, mockVersionDetail, mockVersionRestoreResponse, createMockVersion } from './designVersion';
+

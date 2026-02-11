@@ -39,9 +39,17 @@ export function EquipmentSelector({ designId }: EquipmentSelectorProps) {
     // Sync local state with design data
     useEffect(() => {
         if (design) {
-            setLocalModuleId(design.equipment_module_id ?? null);
-            setLocalInverterId(design.equipment_inverter_id ?? null);
-            setEquipmentSelection(design.equipment_module_id ?? null, design.equipment_inverter_id ?? null);
+            const modId = design.equipment_module_id ?? null;
+            const invId = design.equipment_inverter_id ?? null;
+
+            setLocalModuleId(modId);
+            setLocalInverterId(invId);
+
+            // Only update store if values actually changed to prevent loops
+            const currentStore = useDesignCanvasStore.getState();
+            if (currentStore.equipmentModuleId !== modId || currentStore.equipmentInverterId !== invId) {
+                setEquipmentSelection(modId, invId);
+            }
         }
     }, [design?.id, design?.equipment_module_id, design?.equipment_inverter_id, setEquipmentSelection]);
 

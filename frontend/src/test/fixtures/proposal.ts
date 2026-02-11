@@ -33,3 +33,8 @@ export const mockProposalStatusFailure: ProposalStatusResponse = {
     status: 'FAILURE',
     error: 'PDF generation failed'
 };
+
+// Aliases for convenience
+export const mockProposal = mockProposalStatusSuccess;
+export const mockProposalTask = mockProposalTaskResponse;
+

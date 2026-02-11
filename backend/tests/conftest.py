@@ -31,3 +31,45 @@ try:
     import geojson
 except ImportError:
     sys.modules["geojson"] = mock_module("geojson")
+try:
+    import boto3
+except ImportError:
+    sys.modules["boto3"] = mock_module("boto3")
+    sys.modules["botocore"] = mock_module("botocore")
+    sys.modules["botocore.exceptions"] = mock_module("botocore.exceptions")
+
+try:
+    import jinja2
+except ImportError:
+    m = mock_module("jinja2")
+    m.Environment = MagicMock
+    m.FileSystemLoader = MagicMock
+    sys.modules["jinja2"] = m
+
+try:
+    import weasyprint
+    import weasyprint.text.ffi # Trigger OSError if DLLs missing
+except (ImportError, OSError):
+    m = mock_module("weasyprint")
+    m.HTML = MagicMock
+    sys.modules["weasyprint"] = m
+
+try:
+    import firebase_admin
+except ImportError:
+    m = mock_module("firebase_admin")
+    m.credentials = MagicMock()
+    m.initialize_app = MagicMock()
+    m.auth = MagicMock()
+    sys.modules["firebase_admin"] = m
+    sys.modules["firebase_admin.credentials"] = m.credentials
+    sys.modules["firebase_admin.auth"] = m.auth
+
+try:
+    import matplotlib
+    import matplotlib.pyplot # Trigger OSError
+except (ImportError, OSError):
+    m = mock_module("matplotlib")
+    m.pyplot = MagicMock()
+    sys.modules["matplotlib"] = m
+    sys.modules["matplotlib.pyplot"] = m.pyplot

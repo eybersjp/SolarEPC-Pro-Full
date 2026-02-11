@@ -70,13 +70,20 @@ global.ResizeObserver = vi.fn().mockImplementation(() => ({
     disconnect: vi.fn(),
 }))
 
-vi.mock('firebase/auth', () => ({
-    getAuth: vi.fn(() => ({
-        currentUser: {
-            getIdToken: vi.fn(() => Promise.resolve('mock-token')),
-        },
-    })),
-}))
+vi.mock('firebase/auth', () => {
+    class GoogleAuthProvider { }
+    return {
+        getAuth: vi.fn(() => ({
+            currentUser: {
+                getIdToken: vi.fn(() => Promise.resolve('mock-token')),
+            },
+        })),
+        GoogleAuthProvider,
+        signInWithPopup: vi.fn(),
+        signOut: vi.fn(),
+        onAuthStateChanged: vi.fn(),
+    }
+})
 
 // Mock matchMedia
 Object.defineProperty(window, 'matchMedia', {

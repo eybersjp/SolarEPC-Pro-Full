@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { CanvasLayout } from "@/components/DesignCanvas/CanvasLayout";
 import MapCanvas from "@/components/DesignCanvas/MapCanvas";
 import { useSiteDesignQuery } from "@/hooks/useSiteDesigns";
@@ -44,7 +44,10 @@ export default function DesignCanvasPage() {
     // Sync version context with design data
     useEffect(() => {
         if (design) {
-            setCurrentVersionName(design.version_name || null);
+            const currentName = useDesignCanvasStore.getState().currentVersionName;
+            if (currentName !== design.version_name) {
+                setCurrentVersionName(design.version_name || null);
+            }
         }
     }, [designId, design?.version_name, setCurrentVersionName]);
 
@@ -88,11 +91,11 @@ export default function DesignCanvasPage() {
         setPendingNavigation(null);
     };
 
-    const navigationValue: NavigationContextType = {
+    const navigationValue = useMemo(() => ({
         push: (url: string) => handleNavigationAttempt(() => router.push(url)),
         replace: (url: string) => handleNavigationAttempt(() => router.replace(url)),
         back: () => handleNavigationAttempt(() => router.back()),
-    };
+    }), [router, syncState]); // syncState is used inside handleNavigationAttempt
 
     // Calculate center from boundary if not available on design object
     const getCenter = (): [number, number] => {

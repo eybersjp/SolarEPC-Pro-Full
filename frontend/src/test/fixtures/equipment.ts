@@ -54,3 +54,8 @@ export const mockInvertersList = [
         capacity_kw: 100
     }
 ];
+
+// Aliases for convenience
+export const mockModule = mockEquipmentModule;
+export const mockInverter = mockEquipmentInverter;
+

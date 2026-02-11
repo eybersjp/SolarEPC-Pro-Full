@@ -28,15 +28,13 @@ interface ToolbarProps {
 
 export function Toolbar({ tenderId, designId, title, isVersionListOpen, onVersionListOpenChange }: ToolbarProps) {
     const { back } = useDesignNavigation();
-    const { syncState, lastSyncedAt, retryCount, lastMutationData, currentVersionName, setCurrentVersionName, isModifiedSinceVersion } = useDesignCanvasStore((state) => ({
-        syncState: state.syncState,
-        lastSyncedAt: state.lastSyncedAt,
-        retryCount: state.retryCount,
-        lastMutationData: state.lastMutationData,
-        currentVersionName: state.currentVersionName,
-        setCurrentVersionName: state.setCurrentVersionName,
-        isModifiedSinceVersion: state.isModifiedSinceVersion,
-    }));
+    const syncState = useDesignCanvasStore((state) => state.syncState);
+    const lastSyncedAt = useDesignCanvasStore((state) => state.lastSyncedAt);
+    const retryCount = useDesignCanvasStore((state) => state.retryCount);
+    const lastMutationData = useDesignCanvasStore((state) => state.lastMutationData);
+    const currentVersionName = useDesignCanvasStore((state) => state.currentVersionName);
+    const setCurrentVersionName = useDesignCanvasStore((state) => state.setCurrentVersionName);
+    const isModifiedSinceVersion = useDesignCanvasStore((state) => state.isModifiedSinceVersion);
     const [isWizardOpen, setIsWizardOpen] = useState(false);
     const [isVersionModalOpen, setIsVersionModalOpen] = useState(false);
     const [relativeTime, setRelativeTime] = useState("");

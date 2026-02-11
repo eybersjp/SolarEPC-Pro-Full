@@ -18,7 +18,12 @@ interface PolygonDrawingLayerProps {
  * Handles the interactive drawing of site boundaries and exclusion zones.
  */
 export default function PolygonDrawingLayer({ designId }: PolygonDrawingLayerProps) {
-    const { mode, selectedTool, setMode, setSelectedTool, hasEquipmentSelected, setSyncState } = useDesignCanvasStore();
+    const mode = useDesignCanvasStore((state) => state.mode);
+    const selectedTool = useDesignCanvasStore((state) => state.selectedTool);
+    const setMode = useDesignCanvasStore((state) => state.setMode);
+    const setSelectedTool = useDesignCanvasStore((state) => state.setSelectedTool);
+    const hasEquipmentSelected = useDesignCanvasStore((state) => state.hasEquipmentSelected);
+    const setSyncState = useDesignCanvasStore((state) => state.setSyncState);
     const { data: design } = useSiteDesignQuery(designId);
     const updateMutation = useUpdateSiteDesignMutation(designId);
 

@@ -70,8 +70,24 @@ export const handlers = [
         const url = new URL(request.url);
         const retryTest = url.searchParams.get('retry-test');
 
+        // Simulate network timeout
+        if (id.includes('timeout-test')) {
+            await new Promise(resolve => setTimeout(resolve, 5000)); // Long delay
+            return HttpResponse.error(); // Network error simulation
+        }
+
         testState.putCallCount[id] = (testState.putCallCount[id] || 0) + 1;
         const count = testState.putCallCount[id];
+
+        if (id.includes('rate-limit')) {
+            if (count <= 2) {
+                return new HttpResponse(null, {
+                    status: 429,
+                    statusText: 'Too Many Requests',
+                    headers: { 'Retry-After': '1' }
+                });
+            }
+        }
 
         if (retryTest === 'true' || id.includes('retry-test')) {
             const failCount = parseInt(url.searchParams.get('fail-count') || '3');
