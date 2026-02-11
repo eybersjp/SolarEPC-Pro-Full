@@ -58,6 +58,7 @@ async def list_site_designs(
 ):
     """
     List all site designs for a tender.
+    Returns list of designs with their current calculated metrics (system size, module count).
     """
     designs = site_design_service.list_designs(tender_id)
     return [SiteDesignResponse.model_validate(d) for d in designs]
@@ -74,7 +75,16 @@ async def create_site_design(
     """
     Create a new site design.
     
-    Requires: Admin or PM role.
+    Requires Admin or PM role.
+    
+    The `site_boundary` must be a valid GeoJSON Polygon.
+    Example:
+    ```json
+    {
+      "type": "Polygon",
+      "coordinates": [[[0,0], [100,0], [100,100], [0,100], [0,0]]]
+    }
+    ```
     """
     design = site_design_service.create_design(
         tender_id=tender_id,
@@ -111,7 +121,14 @@ async def update_site_design(
     """
     Update site design geometry, settings, or equipment.
     
-    Requires: Admin or PM role.
+    Requires Admin or PM role.
+    
+    **Partial Updates**: You can update individual fields.
+    - Updating `site_boundary`, `exclusion_zones`, or `placement_settings` will trigger **automatic module placement recalculation**.
+    - Updating `equipment_module_id` or `equipment_inverter_id` will also trigger recalculation.
+    
+    The response will contain the updated design with the *old* metrics until the async placement task completes (if triggered).
+    Poll the `placement_task_status` field to check progress.
     """
     design = site_design_service.get_design_or_404(design_id)
     
@@ -184,6 +201,9 @@ async def create_design_version(
 ):
     """
     Create a new immutable version snapshot of the site design.
+    
+    This saves the current state (geometry, settings, equipment, calculated metrics) as a read-only version.
+    Useful for comparing different design iterations.
     """
     version = service.create_version(
         site_design_id=design_id,
@@ -225,6 +245,9 @@ async def restore_design_version(
 ):
     """
     Restore a site design to a previous version.
+    
+    **Warning**: This overwrites the current design state with the version snapshot.
+    It automatically triggers a recalculation to ensure the restored design limits are valid against current equipment specs.
     """
     site_design, recalc_status = service.restore_version(version_id=version_id, site_design_id=design_id)
     return {
@@ -240,6 +263,13 @@ async def estimate_energy(
 ):
     """
     Trigger energy estimation for a site design.
+    
+    This initiates an asynchronous background task that calls the NREL PVWatts API.
+    Returns the `estimate_id` and initial status.
+    
+    **Flow**:
+    1. Call this endpoint -> receive `estimate_id`.
+    2. Poll `GET /site-designs/{design_id}/energy-estimate` to check status.
     """
     from app.services.energy_estimation import EnergyEstimationService
     service = EnergyEstimationService(db)
@@ -259,6 +289,12 @@ async def get_energy_estimate(
 ):
     """
     Get energy estimate results.
+    
+    **Statuses**:
+    - `not_calculated`: No estimation has been run yet.
+    - `calculating`: Async task is currently running.
+    - `completed`: Results are available.
+    - `failed`: Check `error_message` for details (e.g., NREL API timeout).
     """
     from app.services.energy_estimation import EnergyEstimationService
     service = EnergyEstimationService(db)

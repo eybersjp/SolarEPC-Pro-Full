@@ -45,7 +45,17 @@ class DesignVersionResponse(DesignVersionBase):
 
 
 class DesignVersionDetail(DesignVersionResponse):
-    snapshot_data: Dict[str, Any]
+    snapshot_data: Dict[str, Any] = Field(
+        ...,
+        description="Complete JSON dump of the design state at version creation.",
+        example={
+            "site_boundary": {"type": "Polygon", "coordinates": [[[0,0], [10,0], [10,10], [0,10], [0,0]]]},
+            "placement_settings": {"edge_setback_m": 1.0, "row_spacing_m": 2.0},
+            "equipment_module_id": "uuid",
+            "total_modules": 120,
+            "system_size_kwp": 48.5
+        }
+    )
 
 
 class DesignVersionRestoreResponse(BaseModel):

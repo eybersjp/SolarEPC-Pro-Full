@@ -23,15 +23,19 @@ class GeoJSONPolygon(BaseModel):
     We'll do deeper semantic validation (closure, self-intersection) in the service layer util.
     """
     type: str = Field(..., pattern="^Polygon$")
-    coordinates: List[List[List[float]]] = Field(..., description="Array of linear rings. The first ring is the exterior boundary.")
+    coordinates: List[List[List[float]]] = Field(
+        ..., 
+        description="Array of linear rings. The first ring is the exterior boundary. Subsequent rings are holes.",
+        example=[[[0, 0], [100, 0], [100, 100], [0, 100], [0, 0]]]
+    )
 
 
 class PlacementSettings(BaseModel):
-    edge_setback_m: float = Field(1.0, ge=0.0)
-    row_spacing_m: float = Field(2.0, ge=0.0)
+    edge_setback_m: float = Field(1.0, ge=0.0, description="Minimum distance from site boundary to modules (meters).")
+    row_spacing_m: float = Field(2.0, ge=0.0, description="Spacing between rows of modules (meters).")
     module_orientation: ModuleOrientationEnum = ModuleOrientationEnum.PORTRAIT
-    azimuth_deg: float = Field(180.0, ge=0.0, le=360.0)
-    tilt_deg: Optional[float] = Field(None, ge=0.0, le=90.0, description="If not provided, defaults based on site_type")
+    azimuth_deg: float = Field(180.0, ge=0.0, le=360.0, description="Azimuth angle in degrees (180 = South).")
+    tilt_deg: Optional[float] = Field(None, ge=0.0, le=90.0, description="Tilt angle in degrees. If not provided, defaults based on site_type (e.g., 20 deg for ground mount).")
 
 
 class SiteDesignBase(BaseModel):
@@ -78,9 +82,9 @@ class SiteDesignResponse(SiteDesignBase):
     # but currently it's nested in placement_settings.
     
     # Calculated Results
-    total_modules: int
-    system_size_kwp: float
-    site_area_sqm: Optional[float] = None
+    total_modules: int = Field(..., description="Total number of modules placed.")
+    system_size_kwp: float = Field(..., description="Total system capacity in kWp (modules * rating).")
+    site_area_sqm: Optional[float] = Field(None, description="Total area of the site boundary in square meters.")
     
     # Task Tracking
     placement_task_id: Optional[str] = None
