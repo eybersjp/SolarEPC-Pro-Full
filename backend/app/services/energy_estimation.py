@@ -129,6 +129,18 @@ class EnergyEstimationService:
             params
         )
 
+        # Log audit entry
+        from app.services.audit import AuditService
+        audit = AuditService(self.db)
+        audit.log(
+            tenant_id=tender.tenant_id,
+            user_id=site_design.created_by,
+            entity_type="EnergyEstimate",
+            entity_id=existing_estimate.id,
+            action="calculate_energy",
+            new_value={"site_design_id": str(site_design_id)}
+        )
+
         return existing_estimate
 
     def _compute_hash(self, params: Dict) -> str:

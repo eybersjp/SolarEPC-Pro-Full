@@ -1,4 +1,6 @@
 import sys
+import matplotlib
+matplotlib.use('Agg')
 from unittest.mock import MagicMock
 
 # Function to create a mock module
@@ -73,3 +75,12 @@ except (ImportError, OSError):
     m.pyplot = MagicMock()
     sys.modules["matplotlib"] = m
     sys.modules["matplotlib.pyplot"] = m.pyplot
+
+import pytest
+
+@pytest.fixture(autouse=True)
+def mock_celery_for_tests(monkeypatch):
+    """Configure Celery for synchronous execution in tests"""
+    monkeypatch.setenv("CELERY_ALWAYS_EAGER", "True")
+    monkeypatch.setenv("CELERY_EAGER_PROPAGATES", "True")
+

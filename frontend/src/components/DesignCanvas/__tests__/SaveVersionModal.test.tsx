@@ -21,6 +21,20 @@ vi.mock('@/components/ui/dialog', async () => {
     };
 });
 
+// Mock useCreateVersionMutation
+const { mockMutate, mockReset } = vi.hoisted(() => ({
+    mockMutate: vi.fn(),
+    mockReset: vi.fn(),
+}));
+
+vi.mock('@/hooks/useSiteDesigns', () => ({
+    useCreateVersionMutation: () => ({
+        mutate: mockMutate,
+        reset: mockReset,
+        isPending: false,
+    })
+}));
+
 describe('SaveVersionModal', () => {
     const defaultProps = {
         designId: 'design-1',
@@ -153,27 +167,70 @@ describe('SaveVersionModal', () => {
 
         it('should show loading state during submission', async () => {
             const user = userEvent.setup();
-            renderWithProviders(<SaveVersionModal {...defaultProps} />);
+            // Initial render with isPending: false
+            const { rerender } = renderWithProviders(<SaveVersionModal {...defaultProps} />);
 
             const nameInput = screen.getByLabelText(/Version Name/i);
             await user.type(nameInput, 'Loading Test');
 
-            const saveButton = screen.getByRole('button', { name: /Save Version/i });
-            await user.click(saveButton);
+            // Update mock to return isPending: true and rerender
+            // We need to re-import to access the mocked function
+            const { useCreateVersionMutation } = await import('@/hooks/useSiteDesigns');
+            vi.mocked(useCreateVersionMutation).mockReturnValue({
+                mutate: mockMutate,
+                reset: mockReset,
+                isPending: true,
+                data: undefined,
+                variables: undefined,
+                error: null,
+                isError: false,
+                isIdle: false,
+                isSuccess: false,
+                status: 'pending',
+                context: undefined,
+                failureCount: 0,
+                failureReason: null,
+                isPaused: false,
+                submittedAt: 0,
+                mutateAsync: vi.fn(),
+            } as any);
 
+            rerender(<SaveVersionModal {...defaultProps} />);
+
+            const saveButton = screen.getByRole('button', { name: /Save Version/i });
             expect(screen.getByText(/Saving.../i)).toBeInTheDocument();
             expect(saveButton).toBeDisabled();
         });
 
         it('should disable cancel button during submission', async () => {
             const user = userEvent.setup();
-            renderWithProviders(<SaveVersionModal {...defaultProps} />);
+            const { rerender } = renderWithProviders(<SaveVersionModal {...defaultProps} />);
 
             const nameInput = screen.getByLabelText(/Version Name/i);
             await user.type(nameInput, 'Test');
 
-            const saveButton = screen.getByRole('button', { name: /Save Version/i });
-            await user.click(saveButton);
+            // Update mock to return isPending: true and rerender
+            const { useCreateVersionMutation } = await import('@/hooks/useSiteDesigns');
+            vi.mocked(useCreateVersionMutation).mockReturnValue({
+                mutate: mockMutate,
+                reset: mockReset,
+                isPending: true,
+                data: undefined,
+                variables: undefined,
+                error: null,
+                isError: false,
+                isIdle: false,
+                isSuccess: false,
+                status: 'pending',
+                context: undefined,
+                failureCount: 0,
+                failureReason: null,
+                isPaused: false,
+                submittedAt: 0,
+                mutateAsync: vi.fn(),
+            } as any);
+
+            rerender(<SaveVersionModal {...defaultProps} />);
 
             const cancelButton = screen.getByRole('button', { name: /Cancel/i });
             expect(cancelButton).toBeDisabled();

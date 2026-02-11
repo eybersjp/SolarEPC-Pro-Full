@@ -75,11 +75,11 @@ def calculate_placement_async(
         logger.error(f"Error in placement calculation for design {design_id}: {str(e)}")
         
         # On final retry, mark as failed
-        if self.request.retries >= self.max_retries:
+        if getattr(self.request, 'retries', 0) >= getattr(self, 'max_retries', 0):
             design = db.query(SiteDesign).filter(SiteDesign.id == UUID(design_id)).first()
             if design:
                 design.placement_task_status = "failed"
-                design.placement_task_error = str(e)[:1000] # Truncate error
+                design.placement_task_error = str(e)
                 db.commit()
         
         raise e
@@ -233,7 +233,7 @@ def calculate_energy_task(self, estimate_id: str, params: Dict[str, Any]):
     except Exception as e:
         db.rollback()
         # Update status to failed only if we are on the last retry
-        if self.request.retries >= self.max_retries:
+        if getattr(self.request, 'retries', 0) >= getattr(self, 'max_retries', 0):
              estimate = db.query(EnergyEstimate).filter(EnergyEstimate.id == estimate_id_uuid).first()
              if estimate:
                 estimate.status = "failed"

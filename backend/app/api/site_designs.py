@@ -97,7 +97,15 @@ async def create_site_design(
     )
     db.commit()
     db.refresh(design)
-    return SiteDesignResponse.model_validate(design)
+    # Ensure UUIDs are strings for serialization safety
+    response_data = SiteDesignResponse.model_validate(design).model_dump()
+    response_data["id"] = str(response_data["id"])
+    response_data["tender_id"] = str(response_data["tender_id"])
+    if response_data.get("equipment_module_id"):
+        response_data["equipment_module_id"] = str(response_data["equipment_module_id"])
+    if response_data.get("equipment_inverter_id"):
+        response_data["equipment_inverter_id"] = str(response_data["equipment_inverter_id"])
+    return response_data
 
 
 @router.get("/site-designs/{design_id}", response_model=SiteDesignResponse)
@@ -166,8 +174,11 @@ async def update_site_design(
     
     if request.name and request.name != design.name:
         design.name = request.name
-        # Note: Audit logging for name change is missing in current service methods,
-        # but acceptable for this iteration.
+
+    # Trigger recalculation if any critical fields changed
+    if request.site_boundary or request.exclusion_zones or request.placement_settings or \
+       request.equipment_module_id or request.equipment_inverter_id:
+        site_design_service.recalculate_design(design.id)
         
     db.commit()
     db.refresh(design)

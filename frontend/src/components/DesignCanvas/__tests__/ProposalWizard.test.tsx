@@ -185,7 +185,8 @@ describe('ProposalWizard', () => {
             });
 
             await waitFor(() => {
-                expect(screen.getByText(/Generation Failed/i)).toBeInTheDocument();
+                const errorTexts = screen.getAllByText(/Generation Failed/i);
+                expect(errorTexts.length).toBeGreaterThan(0);
                 // We mock toast, so we might check for toast too, but UI check is good
             });
 

@@ -23,6 +23,15 @@ vi.mock('@/hooks/useSiteDesigns', () => ({
     })
 }));
 
+// Mock useDesignNavigation
+vi.mock('../../app/tenders/[id]/design/[designId]/page', () => ({
+    useDesignNavigation: () => ({
+        back: vi.fn(),
+        push: vi.fn(),
+        replace: vi.fn(),
+    })
+}));
+
 describe('Toolbar', () => {
     const props = {
         title: 'Test Design',

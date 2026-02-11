@@ -100,6 +100,18 @@ class FinancialAnalysisService:
 
         self.db.commit()
         self.db.refresh(analysis)
+        
+        from app.services.audit import AuditService
+        audit = AuditService(self.db)
+        audit.log(
+            tenant_id=self.tenant_id,
+            user_id=self.user_id,
+            entity_type="FinancialAnalysis",
+            entity_id=analysis.id,
+            action="calculate_financials",
+            new_value={"site_design_id": str(site_design_id), "roi_pct": analysis.roi_pct}
+        )
+        
         return analysis
 
 def get_financial_service(

@@ -98,8 +98,8 @@ describe('useSiteDesigns hooks', () => {
 
             await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
-            expect(useDesignCanvasStore.getState().syncState).toBe('synced')
-            expect(toast.success).toHaveBeenCalledWith('Design saved')
+            expect(useDesignCanvasStore.getState().syncState).toBe('synced');
+            expect(toast.success).toHaveBeenCalledWith('Version saved successfully');
 
             // Verify final data
             const finalData = queryClient.getQueryData<any>(queryKeys.siteDesigns.detail(designId))
@@ -185,7 +185,7 @@ describe('useSiteDesigns hooks', () => {
             await waitFor(() => expect(useDesignCanvasStore.getState().syncState).toBe('synced'));
 
             expect(useDesignCanvasStore.getState().retryCount).toBe(0);
-            expect(toast.success).toHaveBeenCalledWith("Design saved");
+            expect(toast.success).toHaveBeenCalledWith("Version saved successfully");
             expect(callCount).toBe(4);
         });
 

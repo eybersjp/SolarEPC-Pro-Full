@@ -48,7 +48,10 @@ class SiteDesignBase(BaseModel):
     site_boundary: Dict[str, Any] = Field(..., description="GeoJSON Polygon")
     placement_settings: PlacementSettings = Field(default_factory=PlacementSettings)
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_encoders={UUID: str}
+    )
 
 
 class SiteDesignCreate(SiteDesignBase):

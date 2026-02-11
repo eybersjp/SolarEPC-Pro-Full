@@ -158,6 +158,7 @@ class SiteDesignService:
                 "equipment_inverter_id": str(equipment_inverter_id)
             }
         )
+        self.db.flush()
         
         return design
 
@@ -361,6 +362,15 @@ class SiteDesignService:
             design.placement_task_id = None
             design.placement_task_error = None
             
+            self.audit.log(
+                tenant_id=self.tenant_id,
+                user_id=self.user_id,
+                entity_type="SiteDesign",
+                entity_id=design.id,
+                action="recalculate",
+                new_value={"mode": "sync", "total_modules": design.total_modules}
+            )
+            
             self.db.commit()
             self.db.refresh(design)
 
@@ -396,6 +406,15 @@ class SiteDesignService:
             
             # 3. Store task ID
             design.placement_task_id = task.id
+            
+            self.audit.log(
+                tenant_id=self.tenant_id,
+                user_id=self.user_id,
+                entity_type="SiteDesign",
+                entity_id=design.id,
+                action="recalculate",
+                new_value={"mode": "async", "task_id": task.id}
+            )
             self.db.commit()
 
             return {

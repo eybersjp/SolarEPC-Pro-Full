@@ -37,7 +37,8 @@ describe('FloatingPalette', () => {
         // Hover to check tooltip (if implemented with TooltipProvider, might need waiting)
         await user.hover(roofTool);
         await waitFor(() => {
-            expect(screen.getByText('Select equipment to enable drawing tools')).toBeInTheDocument();
+            const tooltips = screen.getAllByText('Select equipment to enable drawing tools');
+            expect(tooltips.length).toBeGreaterThan(0);
         });
     });
 

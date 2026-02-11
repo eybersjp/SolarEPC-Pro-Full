@@ -1,6 +1,11 @@
 """
 Application configuration using Pydantic Settings.
 """
+import matplotlib
+try:
+    matplotlib.use('Agg')
+except Exception:
+    pass
 from typing import List
 from pydantic import model_validator
 from pydantic_settings import BaseSettings
