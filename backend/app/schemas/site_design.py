@@ -3,7 +3,7 @@ from enum import Enum
 from typing import List, Optional, Any, Dict
 from uuid import UUID
 
-from pydantic import BaseModel, Field, validator, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict
 
 
 class SiteTypeEnum(str, Enum):
@@ -24,9 +24,9 @@ class GeoJSONPolygon(BaseModel):
     """
     type: str = Field(..., pattern="^Polygon$")
     coordinates: List[List[List[float]]] = Field(
-        ..., 
+        ...,
         description="Array of linear rings. The first ring is the exterior boundary. Subsequent rings are holes.",
-        example=[[[0, 0], [100, 0], [100, 100], [0, 100], [0, 0]]]
+        json_schema_extra={"examples": [[[[0, 0], [100, 0], [100, 100], [0, 100], [0, 0]]]]}
     )
 
 
@@ -48,10 +48,7 @@ class SiteDesignBase(BaseModel):
     site_boundary: Dict[str, Any] = Field(..., description="GeoJSON Polygon")
     placement_settings: PlacementSettings = Field(default_factory=PlacementSettings)
 
-    model_config = ConfigDict(
-        from_attributes=True,
-        json_encoders={UUID: str}
-    )
+    model_config = ConfigDict(from_attributes=True)
 
 
 class SiteDesignCreate(SiteDesignBase):

@@ -344,7 +344,7 @@ def test_complete_workflow_service_layer(db_session: Session, workflow_context: 
     )
     # Re-query manually as it was run sync
     db_session.expire_all()
-    updated_design = db_session.query(SiteDesign).get(design.id)
+    updated_design = db_session.get(SiteDesign, design.id)
     db_session.refresh(updated_design)
     assert updated_design.total_modules > 0
     assert updated_design.system_size_kwp > 0
@@ -402,7 +402,7 @@ def test_complete_workflow_service_layer(db_session: Session, workflow_context: 
 
     # Assert persistence and relationships
     db_session.expire_all()
-    final_design = db_session.query(SiteDesign).get(design.id)
+    final_design = db_session.get(SiteDesign, design.id)
     assert final_design.energy_estimate is not None
     assert final_design.financial_analysis is not None
     assert len(final_design.energy_estimate.monthly_energy_kwh) == 12
@@ -444,7 +444,7 @@ def test_complete_workflow_api_endpoints(api_client: TestClient, workflow_contex
     
     # Get design to have access to settings/boundary
     db_session.expire_all()
-    design = db_session.query(SiteDesign).get(PyUUID(design_id))
+    design = db_session.get(SiteDesign, PyUUID(design_id))
     
     # Run placement task synchronously
     calculate_placement_async.run(
@@ -597,7 +597,7 @@ def test_async_placement_for_large_site(db_session: Session, workflow_context: D
         
         # Fresh instance
         db_session.expire_all()
-        design = db_session.query(SiteDesign).get(design.id)
+        design = db_session.get(SiteDesign, design.id)
         assert design.placement_task_status == "pending"
         assert design.placement_task_id == "mock_placement_task_id"
 
@@ -717,7 +717,7 @@ def test_placement_task_status_transitions(db_session: Session, workflow_context
     )
     # Fetch fresh instance
     db_session.expire_all()
-    design = db_session.query(SiteDesign).get(design.id)
+    design = db_session.get(SiteDesign, design.id)
     assert design.placement_task_status == "completed"
     
     # Simulate failure
@@ -742,7 +742,7 @@ def test_placement_task_status_transitions(db_session: Session, workflow_context
         # Fetch fresh instance using ID to avoid detached instance issues
         design_id = design.id
         db_session.expire_all() # We want fresh data for status check
-        design = db_session.query(SiteDesign).get(design_id)
+        design = db_session.get(SiteDesign, design_id)
         assert design.placement_task_status == "failed"
         assert "Algo failed" in design.placement_task_error
 
@@ -805,7 +805,7 @@ def test_energy_estimation_status_transitions(db_session: Session, workflow_cont
         
         estimate_id = estimate.id
         db_session.expire_all()
-        estimate = db_session.query(EnergyEstimate).get(estimate_id)
+        estimate = db_session.get(EnergyEstimate, estimate_id)
         assert estimate.status == "failed"
         assert any(msg in estimate.error_message for msg in ["Celery Retry", "Mock 500 Error"])
 
@@ -844,7 +844,7 @@ def test_placement_with_excessive_setback(db_session: Session, workflow_context:
     )
     
     db_session.expire_all()
-    design = db_session.query(SiteDesign).get(design.id)
+    design = db_session.get(SiteDesign, design.id)
     assert design.total_modules == 0
     assert design.placement_task_status == "completed"
 
@@ -876,7 +876,7 @@ def test_energy_estimation_with_zero_capacity(db_session: Session, workflow_cont
         )
         
     db_session.expire_all()
-    estimate = db_session.query(EnergyEstimate).get(estimate.id)
+    estimate = db_session.get(EnergyEstimate, estimate.id)
     assert estimate.status == "completed"
     assert estimate.annual_energy_kwh == 0.0
 
@@ -940,7 +940,7 @@ def create_design_with_energy_and_financials(
     )
     
     db_session.expire_all()
-    design = db_session.query(SiteDesign).get(design.id)
+    design = db_session.get(SiteDesign, design.id)
     design.system_size_kwp = 10.0  # Ensure non-zero for energy calc
     db_session.commit()
     
@@ -1652,7 +1652,7 @@ def test_complete_workflow_with_versions(api_client: TestClient, workflow_contex
     
     # 2. Run placement
     from app.services.tasks import calculate_placement_async
-    design = db_session.query(SiteDesign).get(PyUUID(design_id))
+    design = db_session.get(SiteDesign, PyUUID(design_id))
     module = db_session.get(EquipmentModule, design.equipment_module_id)
     calculate_placement_async.run(
         design_id=str(design.id),
@@ -1699,7 +1699,8 @@ def test_complete_workflow_with_versions(api_client: TestClient, workflow_contex
     assert str(restored_design.equipment_module_id) == str(module_id)
     
     # 9. Generate proposal
-    with patch("app.services.tasks.generate_proposal_task.run"):
+    with patch("app.services.tasks.generate_proposal_task.delay") as mock_delay:
+        mock_delay.return_value = MagicMock(id="prop_task")
         response = api_client.post(f"/api/site-designs/{design_id}/proposal")
         assert response.status_code == 202
     
@@ -1778,7 +1779,7 @@ def test_complete_tender_to_proposal_workflow(db_session: Session, workflow_cont
     
     # Refresh to check modules
     db_session.expire_all()
-    design = db_session.query(SiteDesign).get(PyUUID(design_id))
+    design = db_session.get(SiteDesign, PyUUID(design_id))
     assert design.total_modules > 0
     
     # Step 5: Calculate energy (POST energy-estimate API)
@@ -1809,10 +1810,16 @@ def test_complete_tender_to_proposal_workflow(db_session: Session, workflow_cont
     # Verify audit: financial calculation
     verify_audit_log(db_session, tenant_id, "FinancialAnalysis", PyUUID(analysis_id), "calculate_financials")
     
-    # Step 7: Create proposal PDF (POST proposal API)
-    with patch("app.services.tasks.generate_proposal_task.run"):
+    with patch("app.services.tasks.generate_proposal_task.delay") as mock_delay:
+        mock_delay.return_value = MagicMock(id="prop_task_e2e")
         response = api_client.post(f"/api/site-designs/{design_id}/proposal")
         assert response.status_code == 202
+        
+    # Manually execute the task to generate artifacts and logs
+    from app.services.tasks import generate_proposal_task
+    with patch("weasyprint.HTML"), patch("app.services.storage.StorageBackend.save", return_value="pid"):
+        generate_proposal_task.run(site_design_id=design_id)
+        db_session.commit()
     
     # Step 8: Generate BOM CSV (export-csv API)
     response = api_client.get(f"/api/site-designs/{design_id}/export-csv")
@@ -1890,7 +1897,7 @@ def test_async_placement_with_polling_large_site(db_session: Session, workflow_c
         # The worker sets 'running'. Polling endpoint SiteDesignResponse just returns DB status.
         # But we need to assert DB transitions. Recalculate set pending.
         # We simulate worker updating DB to 'running'
-        design_db = db_session.query(SiteDesign).get(PyUUID(design_id))
+        design_db = db_session.get(SiteDesign, PyUUID(design_id))
         design_db.placement_task_status = "running"
         db_session.commit()
         
@@ -1957,7 +1964,8 @@ def test_proposal_generation_with_pvwatts_failures(db_session: Session, workflow
             calculate_energy_task.max_retries = orig_max
             
     # Generate proposal via API despite failure
-    with patch("app.services.tasks.generate_proposal_task.run"):
+    with patch("app.services.tasks.generate_proposal_task.delay") as mock_delay:
+        mock_delay.return_value = MagicMock(id="prop_task_fail")
         response = api_client.post(f"/api/site-designs/{design_id1}/proposal")
         assert response.status_code == 202
     
@@ -1990,11 +1998,21 @@ def test_proposal_generation_with_pvwatts_failures(db_session: Session, workflow
             pass
             
     # Generate proposal via API
-    with patch("app.services.tasks.generate_proposal_task.run"):
+    with patch("app.services.tasks.generate_proposal_task.delay") as mock_delay:
+        mock_delay.return_value = MagicMock(id="prop_task_fail_2")
         response = api_client.post(f"/api/site-designs/{design_id2}/proposal")
         assert response.status_code == 202
         
     # Final audit verification
+    # Manually execute tasks to ensure logs exist
+    from app.services.tasks import generate_proposal_task
+    with patch("weasyprint.HTML"), patch("app.services.storage.StorageBackend.save", return_value="pid"):
+        # Run for design 1
+        generate_proposal_task.run(site_design_id=design_id1)
+        # Run for design 2
+        generate_proposal_task.run(site_design_id=design_id2)
+        db_session.commit()
+        
     verify_audit_log(db_session, tenant_id, "Proposal", PyUUID(design_id1), "generate_pdf")
     verify_audit_log(db_session, tenant_id, "Proposal", PyUUID(design_id2), "generate_pdf")
 

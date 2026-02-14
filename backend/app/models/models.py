@@ -33,6 +33,26 @@ class TenderStatus(str, PyEnum):
     LOST = "lost"
 
 
+class SiteType(str, PyEnum):
+    """Site installation type for design layouts."""
+    ROOFTOP = "rooftop"
+    GROUND_MOUNT = "ground_mount"
+    CARPORT = "carport"
+
+
+class ModuleOrientation(str, PyEnum):
+    """Physical orientation of PV modules in the array."""
+    PORTRAIT = "portrait"
+    LANDSCAPE = "landscape"
+
+
+class EnergyEstimateStatus(str, PyEnum):
+    """Status of an energy estimation calculation."""
+    CALCULATING = "calculating"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
 class Tenant(Base):
     """Tenant/organization model."""
     __tablename__ = "tenants"
@@ -251,7 +271,7 @@ class SiteDesign(Base):
     
     # Metadata
     name = Column(String(255), nullable=False)
-    site_type = Column(String(50), nullable=False)  # rooftop, ground_mount, carport
+    site_type = Column(Enum(SiteType), nullable=False)
     created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -268,7 +288,7 @@ class SiteDesign(Base):
     # Placement Settings
     edge_setback_m = Column(Float, default=1.0)
     row_spacing_m = Column(Float, default=2.0)
-    module_orientation = Column(String(20), default="portrait")
+    module_orientation = Column(Enum(ModuleOrientation), default=ModuleOrientation.PORTRAIT)
     azimuth_deg = Column(Float, default=180.0)
     tilt_deg = Column(Float, nullable=False)
     
@@ -295,7 +315,7 @@ class SiteDesign(Base):
         return {
             "edge_setback_m": self.edge_setback_m,
             "row_spacing_m": self.row_spacing_m,
-            "module_orientation": self.module_orientation,
+            "module_orientation": self.module_orientation.value if self.module_orientation else None,
             "azimuth_deg": self.azimuth_deg,
             "tilt_deg": self.tilt_deg,
         }
@@ -337,7 +357,7 @@ class EnergyEstimate(Base):
     monthly_energy_kwh = Column(JSON_TYPE, nullable=False)
     capacity_factor = Column(Float, nullable=False)
     
-    status = Column(String(20), default="calculating")
+    status = Column(Enum(EnergyEstimateStatus), default=EnergyEstimateStatus.CALCULATING)
     error_message = Column(Text, nullable=True)
     retry_count = Column(Integer, nullable=False, default=0)
     last_retry_at = Column(DateTime, nullable=True)

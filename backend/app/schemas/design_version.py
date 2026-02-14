@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Optional, Dict, Any
 from uuid import UUID
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 # We might want to re-use SiteDesign schemas for the snapshot data
 # but keeping it as Dict[str, Any] is more flexible and robust to schema changes over time.
@@ -17,12 +17,14 @@ class DesignVersionCreate(DesignVersionBase):
     pass
 
 class DesignVersionResponse(DesignVersionBase):
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     site_design_id: UUID
     created_at: datetime
     total_modules: Optional[int] = None
     system_size_kwp: Optional[float] = None
-    
+
     @model_validator(mode="before")
     @classmethod
     def pull_stats_from_snapshot(cls, data: Any) -> Any:
@@ -40,21 +42,18 @@ class DesignVersionResponse(DesignVersionBase):
                 data["system_size_kwp"] = data["snapshot_data"].get("system_size_kwp")
         return data
 
-    class Config:
-        from_attributes = True
-
 
 class DesignVersionDetail(DesignVersionResponse):
     snapshot_data: Dict[str, Any] = Field(
         ...,
         description="Complete JSON dump of the design state at version creation.",
-        example={
+        json_schema_extra={"examples": [{
             "site_boundary": {"type": "Polygon", "coordinates": [[[0,0], [10,0], [10,10], [0,10], [0,0]]]},
             "placement_settings": {"edge_setback_m": 1.0, "row_spacing_m": 2.0},
             "equipment_module_id": "uuid",
             "total_modules": 120,
             "system_size_kwp": 48.5
-        }
+        }]}
     )
 
 

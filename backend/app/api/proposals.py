@@ -48,7 +48,7 @@ async def generate_proposal(
     if request is None:
         request = ProposalGenerateRequest()
         
-    options = request.dict()
+    options = request.model_dump()
     task = tasks.generate_proposal_task.delay(str(design_id), options)
     return {"task_id": task.id, "status": "PENDING"}
 

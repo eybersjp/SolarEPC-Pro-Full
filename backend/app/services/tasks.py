@@ -19,7 +19,7 @@ def calculate_placement_async(
     from app.models.models import SiteDesign, EquipmentModule
     from app.services.energy_estimation import EnergyEstimationService
     from uuid import UUID
-    from datetime import datetime
+    from datetime import datetime, UTC
     import logging
 
     logger = logging.getLogger(__name__)
@@ -51,7 +51,7 @@ def calculate_placement_async(
         design.module_placements = result["module_placements"]
         design.total_modules = result["total_modules"]
         design.system_size_kwp = (design.total_modules * wattage) / 1000.0
-        design.placement_calculated_at = datetime.utcnow()
+        design.placement_calculated_at = datetime.now(UTC)
         design.placement_task_status = "completed"
         design.placement_task_error = None
         
@@ -145,7 +145,7 @@ def calculate_energy_task(self, estimate_id: str, params: Dict[str, Any]):
     """
     import httpx
     import time
-    from datetime import datetime
+    from datetime import datetime, UTC
     from sqlalchemy.orm import Session
     from app.core.database import SessionLocal
     from app.models.models import EnergyEstimate
@@ -162,7 +162,7 @@ def calculate_energy_task(self, estimate_id: str, params: Dict[str, Any]):
 
         # Increment retry count and set last_retry_at
         estimate.retry_count += 1
-        estimate.last_retry_at = datetime.utcnow()
+        estimate.last_retry_at = datetime.now(UTC)
         db.commit()
 
         # API Configuration

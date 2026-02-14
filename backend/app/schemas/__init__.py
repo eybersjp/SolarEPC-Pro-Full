@@ -6,7 +6,7 @@ from datetime import datetime
 from uuid import UUID
 from enum import Enum
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
 # Enums
@@ -41,15 +41,14 @@ class LoginRequest(BaseModel):
 
 class UserResponse(BaseModel):
     """User response."""
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     email: str
     name: Optional[str]
     role: UserRoleEnum
     tenant_id: UUID
     is_active: bool
-    
-    class Config:
-        from_attributes = True
 
 
 class UserInvite(BaseModel):
@@ -67,11 +66,10 @@ class TenantCreate(BaseModel):
 
 class TenantResponse(BaseModel):
     """Tenant response."""
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     name: str
-    
-    class Config:
-        from_attributes = True
 
 
 # Tender Schemas
@@ -96,6 +94,8 @@ class TenderUpdate(BaseModel):
 
 class TenderResponse(BaseModel):
     """Tender response."""
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     name: str
     client_name: Optional[str]
@@ -104,9 +104,6 @@ class TenderResponse(BaseModel):
     target_capacity_kw: Optional[float]
     status: TenderStatusEnum
     created_at: datetime
-    
-    class Config:
-        from_attributes = True
 
 
 # Precondition Schemas
@@ -122,15 +119,14 @@ class PreconditionUpdate(BaseModel):
 
 class PreconditionResponse(BaseModel):
     """Precondition response."""
+    model_config = ConfigDict(from_attributes=True)
+
     grid_connection: bool
     land_access: bool
     permits_cleared: bool
     financing_confirmed: bool
     go_decision: bool
     notes: Optional[str]
-    
-    class Config:
-        from_attributes = True
 
 
 # PV Design Schemas
@@ -146,6 +142,8 @@ class PVDesignCreate(BaseModel):
 
 class PVDesignResponse(BaseModel):
     """PV design response with calculated fields."""
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     module_model: str
     module_watt: int
@@ -157,9 +155,6 @@ class PVDesignResponse(BaseModel):
     total_modules: int
     total_capacity_kwp: float
     created_at: datetime
-    
-    class Config:
-        from_attributes = True
 
 
 # BOQ Schemas
@@ -183,6 +178,8 @@ class BOQItemUpdate(BaseModel):
 
 class BOQItemResponse(BaseModel):
     """BOQ item response."""
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     category: str
     description: str
@@ -190,9 +187,6 @@ class BOQItemResponse(BaseModel):
     quantity: int
     margin_pct: float
     line_total: float
-    
-    class Config:
-        from_attributes = True
 
 
 class BOQSummary(BaseModel):
@@ -223,14 +217,13 @@ class EquipmentModuleCreate(BaseModel):
 
 class EquipmentModuleResponse(EquipmentModuleCreate):
     """Equipment Module response."""
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     tenant_id: Optional[UUID]
     is_global: bool
     is_active: bool
     created_at: datetime
-    
-    class Config:
-        from_attributes = True
 
 
 class EquipmentInverterCreate(BaseModel):
@@ -248,14 +241,13 @@ class EquipmentInverterCreate(BaseModel):
 
 class EquipmentInverterResponse(EquipmentInverterCreate):
     """Equipment Inverter response."""
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     tenant_id: Optional[UUID]
     is_global: bool
     is_active: bool
     created_at: datetime
-    
-    class Config:
-        from_attributes = True
 
 
 class EquipmentSearchParams(BaseModel):

@@ -11,11 +11,13 @@ from app.core.database import get_db
 from app.core.security import get_current_user, CurrentUser
 from app.models import FinancialAnalysis
 from app.services.financial_analysis import FinancialAnalysisService
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 router = APIRouter()
 
 class FinancialAnalysisResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     site_design_id: UUID
     system_cost_usd: float
@@ -24,9 +26,6 @@ class FinancialAnalysisResponse(BaseModel):
     annual_savings_usd: float
     simple_payback_years: float
     roi_pct: float
-    
-    class Config:
-        from_attributes = True
 
 def get_financial_service(
     db: Session = Depends(get_db),

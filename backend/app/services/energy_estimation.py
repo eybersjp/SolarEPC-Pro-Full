@@ -3,7 +3,7 @@ Service for energy estimation using NREL PVWatts API.
 """
 import hashlib
 import json
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Dict, Optional
 from uuid import UUID
 
@@ -90,7 +90,7 @@ class EnergyEstimationService:
             existing_estimate.error_message = None
             existing_estimate.retry_count = 0
             existing_estimate.last_retry_at = None
-            existing_estimate.calculated_at = datetime.utcnow()
+            existing_estimate.calculated_at = datetime.now(UTC)
             # Update params stored in model
             existing_estimate.system_capacity_kw = params["system_capacity"]
             existing_estimate.latitude = params["lat"] or 0

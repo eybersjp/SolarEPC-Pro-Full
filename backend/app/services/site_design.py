@@ -21,7 +21,7 @@ from app.utils.geojson_validator import validate_geojson_polygon, calculate_poly
 from app.services.placement_algorithm import PlacementAlgorithmService
 from app.services.tasks import calculate_placement_async
 from celery.result import AsyncResult
-from datetime import datetime
+from datetime import UTC, datetime
 import math
 
 class SiteDesignService:
@@ -158,7 +158,7 @@ class SiteDesignService:
                 "equipment_inverter_id": str(equipment_inverter_id)
             }
         )
-        self.db.flush()
+        self.db.commit()
         
         return design
 
@@ -209,6 +209,7 @@ class SiteDesignService:
                 old_value=old_values,
                 new_value=new_values
             )
+            self.db.commit()
             
         return design
 
@@ -242,6 +243,7 @@ class SiteDesignService:
                 old_value=old_values,
                 new_value=new_values
             )
+            self.db.commit()
             
         return design
 
@@ -281,6 +283,7 @@ class SiteDesignService:
                 old_value=old_values,
                 new_value=new_values
             )
+            self.db.commit()
             
         return design
 
@@ -294,6 +297,7 @@ class SiteDesignService:
             old_value={"name": design.name, "site_type": design.site_type}
         )
         self.db.delete(design)
+        self.db.commit()
 
     def recalculate_design(self, design_id: UUID, trigger_energy_estimation: bool = False) -> Dict[str, Any]:
         """
@@ -358,7 +362,7 @@ class SiteDesignService:
             
             # Status and calculation timestamp
             design.placement_task_status = "completed"
-            design.placement_calculated_at = datetime.utcnow()
+            design.placement_calculated_at = datetime.now(UTC)
             design.placement_task_id = None
             design.placement_task_error = None
             
