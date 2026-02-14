@@ -42,3 +42,6 @@ htmlcov/
 
 # Firebase
 *-firebase-adminsdk-*.json
+
+# Generated Proposals
+generated_proposals/

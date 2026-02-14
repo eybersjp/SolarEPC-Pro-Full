@@ -1,3 +1,8 @@
+import os
+# Force eager execution for all tests to avoid Redis dependency
+os.environ["CELERY_TASK_ALWAYS_EAGER"] = "True"
+os.environ["CELERY_ALWAYS_EAGER"] = "True"
+
 import sys
 import matplotlib
 matplotlib.use('Agg')
@@ -81,6 +86,7 @@ import pytest
 @pytest.fixture(autouse=True)
 def mock_celery_for_tests(monkeypatch):
     """Configure Celery for synchronous execution in tests"""
-    monkeypatch.setenv("CELERY_ALWAYS_EAGER", "True")
+    monkeypatch.setenv("CELERY_TASK_ALWAYS_EAGER", "True")
+    monkeypatch.setenv("CELERY_ALWAYS_EAGER", "True") # Keep for backward compatibility if needed
     monkeypatch.setenv("CELERY_EAGER_PROPAGATES", "True")
 

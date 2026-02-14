@@ -84,7 +84,12 @@ class ProposalService:
         # 2. Generate Chart
         chart_b64 = None
         if energy and energy.monthly_energy_kwh:
-            chart_b64 = self._generate_monthly_chart(energy.monthly_energy_kwh)
+            try:
+                chart_b64 = self._generate_monthly_chart(energy.monthly_energy_kwh)
+            except Exception as e:
+                logger.error(f"Chart generation failed in generate_pdf: {e}")
+                # Continue without chart
+                chart_b64 = None
 
         # 3. Render HTML
         template = self.jinja_env.get_template("proposal.html")
