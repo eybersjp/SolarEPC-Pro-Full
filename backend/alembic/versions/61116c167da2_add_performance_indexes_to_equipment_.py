@@ -39,7 +39,7 @@ def upgrade() -> None:
     op.create_index('ix_site_designs_tender_created', 'site_designs', ['tender_id', 'created_at'], unique=False)
 
     # Energy Estimate Indexes
-    op.create_index('ix_energy_estimates_parameter_hash', 'energy_estimates', ['parameter_hash'], unique=True)
+    op.create_index('ix_energy_estimates_parameter_hash', 'energy_estimates', ['parameter_hash'], unique=False)
     op.create_index('ix_energy_estimates_status', 'energy_estimates', ['status'], unique=False)
 
     # Design Version Indexes
