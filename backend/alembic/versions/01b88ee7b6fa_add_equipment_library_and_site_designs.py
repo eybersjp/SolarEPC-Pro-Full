@@ -174,7 +174,8 @@ def upgrade() -> None:
     )
 
     # Add FK from SiteDesign to PVDesign now that both exist
-    op.create_foreign_key('fk_site_designs_pv_design', 'site_designs', 'pv_designs', ['pv_design_id'], ['id'])
+    with op.batch_alter_table('site_designs') as batch_op:
+        batch_op.create_foreign_key('fk_site_designs_pv_design', 'pv_designs', ['pv_design_id'], ['id'])
 
     # --- BOQ Items ---
     op.create_table(
