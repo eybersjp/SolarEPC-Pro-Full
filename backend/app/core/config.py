@@ -17,7 +17,8 @@ class Settings(BaseSettings):
     # App
     APP_NAME: str = "SolarEPC Pro"
     DEBUG: bool = False
-    
+    ALLOWED_HOSTS: List[str] = ["localhost", "127.0.0.1", "0.0.0.0"]
+
     # Database
     DATABASE_URL: str = "postgresql://postgres:postgres@localhost:5432/solarepc"
     

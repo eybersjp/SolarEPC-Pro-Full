@@ -3,9 +3,12 @@ SolarEPC Pro - FastAPI Application
 """
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
+from app.core.logger import setup_logging
 from app.core.config import settings
 from app.api import auth, tenants, tenders, preconditions, pv_designs, boq, dashboard, helio_prep, helioscope, equipment, site_designs, financial_analysis
+
+# Initialize logging
+setup_logging()
 
 tags_metadata = [
     {
@@ -52,7 +55,7 @@ app = FastAPI(
     - Financial analysis (ROI, IRR, Payback Period)
     - PDF Proposal generation
     
-    ## usage
+    ## Usage
     
     All endpoints require Firebase Authentication token in the `Authorization` header: `Bearer <token>`.
     """,
@@ -71,6 +74,28 @@ app = FastAPI(
     openapi_tags=tags_metadata,
 )
 
+# Rate Limiting
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
+
+# Security Middlewares
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
+
+app.add_middleware(
+    TrustedHostMiddleware, 
+    allowed_hosts=settings.ALLOWED_HOSTS
+)
+app.add_middleware(GZipMiddleware, minimum_size=1000)
+
+
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
@@ -81,10 +106,8 @@ app.add_middleware(
 )
 
 
-@app.get("/health")
-async def health_check():
-    """Health check endpoint."""
-    return {"status": "healthy", "version": "0.2.0"}
+from app.api import health
+app.include_router(health.router, tags=["Health"])
 
 
 # Include routers
