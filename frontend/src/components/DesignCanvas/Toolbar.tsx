@@ -16,7 +16,7 @@ import {
     TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-import { useDesignNavigation } from "../../app/tenders/[id]/design/[designId]/page";
+import { useDesignNavigation } from "@/context/DesignNavigationContext";
 
 interface ToolbarProps {
     tenderId: string;

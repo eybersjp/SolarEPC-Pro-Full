@@ -45,3 +45,4 @@ htmlcov/
 
 # Generated Proposals
 generated_proposals/
+backend/.env.prod

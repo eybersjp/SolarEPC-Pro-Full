@@ -24,7 +24,7 @@ vi.mock('@/hooks/useSiteDesigns', () => ({
 }));
 
 // Mock useDesignNavigation
-vi.mock('../../app/tenders/[id]/design/[designId]/page', () => ({
+vi.mock('@/context/DesignNavigationContext', () => ({
     useDesignNavigation: () => ({
         back: vi.fn(),
         push: vi.fn(),

@@ -38,7 +38,7 @@ vi.mock('next/link', () => ({
 }))
 
 // Mock useDesignNavigation hook for Toolbar
-vi.mock('@/app/tenders/[id]/design/[designId]/page', () => ({
+vi.mock('@/context/DesignNavigationContext', () => ({
     useDesignNavigation: () => ({
         push: mockPush,
         replace: vi.fn(),

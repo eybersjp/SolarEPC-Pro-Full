@@ -9,23 +9,7 @@ import { useDesignCanvasStore } from "@/stores/useDesignCanvasStore";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { LoadingSpinner, ErrorMessage } from "@/components/common";
 
-import { createContext, useContext } from "react";
-
-interface NavigationContextType {
-    push: (url: string) => void;
-    replace: (url: string) => void;
-    back: () => void;
-}
-
-const NavigationContext = createContext<NavigationContextType | null>(null);
-
-export const useDesignNavigation = () => {
-    const context = useContext(NavigationContext);
-    if (!context) {
-        throw new Error("useDesignNavigation must be used within a NavigationProvider");
-    }
-    return context;
-};
+import { NavigationContext, useDesignNavigation } from "@/context/DesignNavigationContext";
 
 export default function DesignCanvasPage() {
     const params = useParams();

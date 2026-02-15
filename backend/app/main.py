@@ -126,3 +126,10 @@ app.include_router(dashboard.router, tags=["Dashboard"])
 
 from app.api import proposals
 app.include_router(proposals.router, prefix="/api", tags=["Proposals"])
+
+# Prometheus Instrumentation
+from prometheus_fastapi_instrumentator import Instrumentator
+
+@app.on_event("startup")
+async def startup():
+    Instrumentator().instrument(app).expose(app)

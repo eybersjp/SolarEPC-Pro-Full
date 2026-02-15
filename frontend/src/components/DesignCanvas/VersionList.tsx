@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { useVersionsQuery, useRestoreVersionMutation } from "@/hooks/useSiteDesigns";
+import { useDesignCanvasStore } from "@/stores/useDesignCanvasStore";
 import { DesignVersionResponse } from "@/types";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { toast } from "@/lib/toast";
