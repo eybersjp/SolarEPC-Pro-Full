@@ -1,5 +1,10 @@
 # SolarEPC Pro
 
+[![Backend CI](https://github.com/eybersjp/SolarEPC-Pro-Full/actions/workflows/backend-ci.yml/badge.svg)](https://github.com/eybersjp/SolarEPC-Pro-Full/actions/workflows/backend-ci.yml)
+[![Frontend Tests](https://github.com/eybersjp/SolarEPC-Pro-Full/actions/workflows/test.yml/badge.svg)](https://github.com/eybersjp/SolarEPC-Pro-Full/actions/workflows/test.yml)
+[![Full Stack Integration](https://github.com/eybersjp/SolarEPC-Pro-Full/actions/workflows/integration.yml/badge.svg)](https://github.com/eybersjp/SolarEPC-Pro-Full/actions/workflows/integration.yml)
+[![Deploy](https://github.com/eybersjp/SolarEPC-Pro-Full/actions/workflows/deploy.yml/badge.svg)](https://github.com/eybersjp/SolarEPC-Pro-Full/actions/workflows/deploy.yml)
+
 Commercial & utility-scale solar EPC operating system.
 
 ## Project Structure

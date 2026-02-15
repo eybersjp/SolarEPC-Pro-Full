@@ -1,0 +1,176 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-ci.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-ci.yml'
+  workflow_dispatch:
+
+jobs:
+  lint-and-type-check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install ruff mypy types-redis types-requests types-python-jose types-passlib sqlalchemy-stubs
+        pip install -r requirements.txt
+        
+    - name: Run Ruff (Linting)
+      run: ruff check .
+      
+    - name: Run MyPy (Type Checking)
+      run: mypy . --ignore-missing-imports
+
+  unit-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend
+    
+    services:
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pytest pytest-cov
+        pip install -r requirements.txt
+        
+    - name: Run Unit Tests
+      env:
+        DATABASE_URL: sqlite:///./test.db # Use SQLite for unit tests logic
+        REDIS_URL: redis://localhost:6379/0
+        SECRET_KEY: testsecret
+      run: |
+        pytest tests/ --cov=app --cov-report=xml --cov-fail-under=80 -m "not integration"
+
+    - name: Upload coverage reports to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        file: ./backend/coverage.xml
+
+  integration-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend
+        
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: solarepc_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+          
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pytest pytest-cov psycopg2-binary
+        pip install -r requirements.txt
+        
+    - name: Run Migrations
+      env:
+        DATABASE_URL: postgresql://postgres:password@localhost:5432/solarepc_test
+      run: |
+        alembic upgrade head
+        
+    - name: Run Integration Tests
+      env:
+        DATABASE_URL: postgresql://postgres:password@localhost:5432/solarepc_test
+        REDIS_URL: redis://localhost:6379/0
+        SECRET_KEY: testsecret
+      run: |
+        pytest tests/ -m "integration"
+
+  build-docker:
+    needs: [unit-tests, integration-tests]
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Build Docker Image
+      run: docker build -f backend/Dockerfile.prod backend/
+
+  security-scan:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install Bandit
+      run: pip install bandit
+      
+    - name: Run Bandit
+      run: bandit -r app/ -ll

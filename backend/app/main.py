@@ -112,7 +112,7 @@ app.include_router(health.router, tags=["Health"])
 
 # Include routers
 app.include_router(auth.router, prefix="/auth", tags=["Authentication"])
-app.include_router(tenants.router, prefix="/tenants", tags=["Tenants"])
+app.include_router(tenants.router, prefix="/api/tenants", tags=["Tenants"])
 app.include_router(tenders.router, prefix="/tenders", tags=["Tenders"])
 app.include_router(preconditions.router, prefix="/tenders", tags=["Preconditions"])
 app.include_router(pv_designs.router, prefix="/tenders", tags=["PV Designs"])

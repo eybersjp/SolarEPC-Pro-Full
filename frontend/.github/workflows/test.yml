@@ -12,7 +12,6 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-
     defaults:
       run:
         working-directory: ./frontend
@@ -30,10 +29,57 @@ jobs:
     - name: Install dependencies
       run: npm ci
 
+    - name: Run tests with coverage
+      run: npm run test:ci -- --coverage
+
+    - name: Upload coverage
+      uses: codecov/codecov-action@v4
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        file: ./frontend/coverage/coverage-final.json
+        flags: frontend
+
+  e2e-tests-hosted:
+    name: E2E Cross-Browser Tests
+    runs-on: ubuntu-latest # Simplifying to Ubuntu for easier docker-compose
+    needs: test
+    
+    services:
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+      postgres:
+        image: postgres:15
+        env:
+           POSTGRES_USER: postgres
+           POSTGRES_PASSWORD: password
+           POSTGRES_DB: solarepc_test
+        ports:
+           - 5432:5432
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Backend
+      run: |
+        docker build -f backend/Dockerfile.prod -t backend:latest backend/
+        docker run -d --name backend --network host -e DATABASE_URL=postgresql://postgres:password@localhost:5432/solarepc_test -e REDIS_URL=redis://localhost:6379/0 backend:latest
+        
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: './frontend/package-lock.json'
+
+    - name: Install dependencies
+      run: npm ci
+
     - name: Run tests
       run: npm run test:ci
 
-  e2e-tests:
+  e2e-tests-matrix:
     name: E2E Cross-Browser Tests
     runs-on: ${{ matrix.browser == 'edge' && 'windows-latest' || 'ubuntu-latest' }}
     timeout-minutes: 30
@@ -305,7 +351,7 @@ jobs:
 
   test-report-summary:
     name: Test Result Summary
-    needs: [e2e-tests, e2e-tests-extended, e2e-tests-platform-specific]
+    needs: [e2e-tests-hosted, e2e-tests-matrix, e2e-tests-extended, e2e-tests-platform-specific]
     if: always()
     runs-on: ubuntu-latest
     

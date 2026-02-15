@@ -1,0 +1,123 @@
+name: Deploy
+
+on:
+  push:
+    tags: [ 'v*.*.*' ]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+        - staging
+        - production
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image_tag: ${{ steps.meta.outputs.version }}
+
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-backend
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-frontend
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=sha
+            
+      - name: Build and push Backend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile.prod
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-backend:${{ steps.meta.outputs.version }}
+          labels: ${{ steps.meta.outputs.labels }}
+          
+      - name: Build and push Frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile.prod
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-frontend:${{ steps.meta.outputs.version }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  deploy-staging:
+    needs: build-and-push
+    if: github.event.inputs.environment == 'staging' || startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    environment: staging
+    
+    steps:
+    - name: Deploy to Staging
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.STAGING_HOST }}
+        username: ${{ secrets.STAGING_USER }}
+        key: ${{ secrets.STAGING_SSH_KEY }}
+        script: |
+          cd /opt/solarepc-pro
+          # Login to registry
+          echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          # Pull new images
+          docker-compose -f docker-compose.prod.yml pull
+          # Restart services
+          docker-compose -f docker-compose.prod.yml up -d
+          # Run migrations
+          docker-compose -f docker-compose.prod.yml exec -T backend alembic upgrade head
+          
+    - name: Smoke Test
+      run: |
+        curl -f https://staging.solarepc.pro/api/health || exit 1
+
+  deploy-production:
+    needs: deploy-staging
+    if: startsWith(github.ref, 'refs/tags/') || github.event.inputs.environment == 'production'
+    runs-on: ubuntu-latest
+    environment: 
+      name: production
+      url: https://app.solarepc.pro
+    
+    steps:
+    - name: Deploy to Production
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.PROD_HOST }}
+        username: ${{ secrets.PROD_USER }}
+        key: ${{ secrets.PROD_SSH_KEY }}
+        script: |
+          cd /opt/solarepc-pro
+          echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          docker-compose -f docker-compose.prod.yml pull
+          docker-compose -f docker-compose.prod.yml up -d
+          docker-compose -f docker-compose.prod.yml exec -T backend alembic upgrade head
+          
+    - name: Health Check
+      run: |
+        curl -f https://app.solarepc.pro/api/health || exit 1

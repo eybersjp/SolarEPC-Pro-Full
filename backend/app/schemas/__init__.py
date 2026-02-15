@@ -70,6 +70,19 @@ class TenantResponse(BaseModel):
 
     id: UUID
     name: str
+    created_at: datetime
+
+
+class TenantUserResponse(BaseModel):
+    """Tenant user response."""
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    email: str
+    name: str
+    role: UserRoleEnum
+    is_active: bool
+    created_at: datetime
 
 
 # Tender Schemas

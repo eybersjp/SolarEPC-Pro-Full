@@ -1,0 +1,22 @@
+[
+    {
+        "name": "Acme Solar",
+        "admins": [
+            {
+                "email": "admin@acmesolar.com",
+                "name": "Acme Admin",
+                "password": "securepassword123"
+            }
+        ]
+    },
+    {
+        "name": "Global Energy Co",
+        "admins": [
+            {
+                "email": "admin@globalenergy.com",
+                "name": "Global Admin",
+                "password": "securepassword123"
+            }
+        ]
+    }
+]
